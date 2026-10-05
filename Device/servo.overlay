@@ -1,0 +1,12 @@
+&pinmux_pwm1 {
+    group0 {
+        pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 18), IOC_TYPE_IOC, 0, 17)>,
+                 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 19), IOC_TYPE_IOC, 0, 17)>;
+    };
+};
+
+&pwm1 {
+    pinctrl-0 = <&pinmux_pwm1>;
+    pinctrl-names = "default";
+    status = "okay";
+};

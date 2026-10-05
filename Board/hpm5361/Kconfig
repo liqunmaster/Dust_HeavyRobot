@@ -1,0 +1,6 @@
+# Copyright 2026 Dust HeavyHero Project
+# SPDX-License-Identifier: Apache-2.0
+
+if BOARD_HPM5361ICB
+
+endif # BOARD_HPM5361ICB

@@ -1,0 +1,28 @@
+CompileFlags:
+  CompilationDatabase: build
+  Remove:
+    - -fno-printf-return-value
+    - -fno-tree-switch-conversion
+    - -fno-isolate-erroneous-paths-dereference
+    - -fno-schedule-insns*
+    - -fno-inline-functions-called-once
+    - --specs=*
+    - -fno-reorder-functions
+
+Diagnostics:
+  Suppress:
+    - unused-includes
+    - unknown_typename
+    - unknown_typename_suggest
+    - typename_requires_specqual
+
+Index:
+  Background: Build
+
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes
+
+Hover:
+  ShowAKA: Yes

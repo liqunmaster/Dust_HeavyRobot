@@ -1,0 +1,6 @@
+# Copyright 2026 Dust HeavyHero Project
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_HPM5361ICB
+	bool "Dust HeavyRobot HPM5361ICB"
+	select SOC_HPM5361

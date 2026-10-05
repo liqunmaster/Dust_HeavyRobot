@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: ICM-42688P-HXY connected through SPI2
+
+compatible: "invensense,icm42688p-hxy"
+
+include: spi-device.yaml
+
+properties:
+  int1-gpios:
+    type: phandle-array
+    required: true
+    description: Data-ready interrupt 1
+
+  int2-gpios:
+    type: phandle-array
+    required: true
+    description: Data-ready interrupt 2

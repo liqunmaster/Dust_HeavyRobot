@@ -1,0 +1,23 @@
+/ {
+    aliases {
+        dt7-uart = &uart4;
+        vt02-uart = &uart1;
+        vt03-uart = &uart1;
+    };
+};
+
+&uart1 {
+    current-speed = <921600>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "none";
+    status = "okay";
+};
+
+&uart4 {
+    current-speed = <100000>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "even";
+    status = "okay";
+};

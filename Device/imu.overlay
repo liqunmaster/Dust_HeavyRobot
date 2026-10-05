@@ -1,0 +1,28 @@
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+    aliases {
+        imu-spi = &icm42688p_hxy;
+        hi14r3-uart = &uart6;
+    };
+};
+
+&spi2 {
+    status = "okay";
+
+    icm42688p_hxy: icm42688p_hxy@0 {
+        compatible = "invensense,icm42688p-hxy";
+        reg = <0>;
+        spi-max-frequency = <6000000>;
+        spi-cpol;
+        spi-cpha;
+        int1-gpios = <&gpiob 15 GPIO_ACTIVE_HIGH>;
+        int2-gpios = <&gpiob 14 GPIO_ACTIVE_HIGH>;
+        status = "okay";
+    };
+};
+
+/* HI14R3 is reserved for the fusion option. Its driver is not enabled yet. */
+&uart6 {
+    status = "okay";
+};

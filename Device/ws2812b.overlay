@@ -1,0 +1,4 @@
+&pwm0 {
+    dmas = <&hdma 2 0x34>;
+    dma-names = "ws2812b";
+};

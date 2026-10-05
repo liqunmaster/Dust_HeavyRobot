@@ -1,0 +1,176 @@
+/*
+ * Copyright 2026 Dust Robotics
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Dust HeavyHero HPM5361ICB pinmux definitions.
+ * Default wiring from the board schematic. Application overlays may replace
+ * a peripheral state when a different operating mode is required.
+ */
+
+#include "dt-bindings/pinctrl/hpmicro-pinctrl-common.h"
+
+&pinctrl {
+	/* UART0 ISP header: PA00 TX, PA01 RX. */
+	pinmux_uart0: pinmux_uart0 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 0), IOC_TYPE_IOC, 0, 2)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 1), IOC_TYPE_IOC, 0, 2)>;
+		};
+	};
+
+	/* UART1 external header: PY07 TX, PY06 RX. */
+	pinmux_uart1: pinmux_uart1 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 7), IOC_TYPE_IOC, 0, 2)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 6), IOC_TYPE_IOC, 0, 2)>;
+		};
+	};
+
+	/* UART2: VT02/VT03 shared figure-transmission interface (PB08/PB09 ALT2) */
+	pinmux_uart2: pinmux_uart2 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 8), IOC_TYPE_IOC, 0, 2)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 9), IOC_TYPE_IOC, 0, 2)>;
+		};
+	};
+
+	/* UART3: debug console / redefined printf (PA14/PA15 ALT2) */
+	pinmux_uart3: pinmux_uart3 {
+		rx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 14), IOC_TYPE_IOC, 0, 2)>;
+			input-enable;
+		};
+		tx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 15), IOC_TYPE_IOC, 0, 2)>;
+		};
+	};
+
+	/* UART4: DT7 remote receiver (PA16/PA17 ALT2) */
+	pinmux_uart4: pinmux_uart4 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 16), IOC_TYPE_IOC, 0, 2)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 17), IOC_TYPE_IOC, 0, 2)>;
+		};
+	};
+
+	/* UART5: PA23 TX, PA22 RX, PA21 DE. */
+	pinmux_uart5: pinmux_uart5 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 23), IOC_TYPE_IOC, 0, 2)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 22), IOC_TYPE_IOC, 0, 2)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 21), IOC_TYPE_IOC, 0, 2)>;
+		};
+	};
+
+	/* UART6: PA24 TX, PA25 RX. */
+	pinmux_uart6: pinmux_uart6 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 24), IOC_TYPE_IOC, 0, 2)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 25), IOC_TYPE_IOC, 0, 2)>;
+		};
+	};
+
+	/* SPI1: W25Q128 log flash, including the quad data pins. */
+	pinmux_spi1: pinmux_spi1 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 26), IOC_TYPE_IOC, 0, 5)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 27), IOC_TYPE_IOC, 0, 5)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 28), IOC_TYPE_IOC, 0, 5)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 29), IOC_TYPE_IOC, 0, 5)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 30), IOC_TYPE_IOC, 0, 5)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 31), IOC_TYPE_IOC, 0, 5)>;
+		};
+	};
+
+	/* SPI2: ICM-42688P-HXY IMU (PB13/12/11/10 = MOSI/MISO/SCLK/CS_0 ALT5) */
+	pinmux_spi2: pinmux_spi2 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 13), IOC_TYPE_IOC, 0, 5)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 12), IOC_TYPE_IOC, 0, 5)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 10), IOC_TYPE_IOC, 0, 5)>;
+		};
+		group1 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 11), IOC_TYPE_IOC, 0, 5)>;
+			input-enable;
+		};
+	};
+
+	pinmux_board_can0: pinmux_board_can0 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 0), IOC_TYPE_IOC, 0, 7)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 1), IOC_TYPE_IOC, 0, 7)>;
+		};
+	};
+
+	pinmux_board_can1: pinmux_board_can1 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 5), IOC_TYPE_IOC, 0, 7)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 4), IOC_TYPE_IOC, 0, 7)>;
+		};
+	};
+
+	pinmux_board_can2: pinmux_board_can2 {
+		tx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 0), IOC_TYPE_IOC, 0, 7)>;
+		};
+		rx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 1), IOC_TYPE_IOC, 0, 7)>;
+			input-enable;
+		};
+		pioc {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 0), IOC_TYPE_PIOC, 0, 3)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 1), IOC_TYPE_PIOC, 0, 3)>;
+		};
+	};
+
+	pinmux_board_can3: pinmux_board_can3 {
+		tx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 5), IOC_TYPE_IOC, 0, 7)>;
+		};
+		rx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 4), IOC_TYPE_IOC, 0, 7)>;
+			input-enable;
+		};
+		pioc {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 5), IOC_TYPE_PIOC, 0, 3)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 4), IOC_TYPE_PIOC, 0, 3)>;
+		};
+	};
+
+	/* PWM0: PA09 P5, PA10 P6, PB07 P7. */
+	pinmux_pwm0: pinmux_pwm0 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 9), IOC_TYPE_IOC, 0, 16)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 10), IOC_TYPE_IOC, 0, 16)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 7), IOC_TYPE_IOC, 0, 16)>;
+		};
+	};
+
+	/* PWM1: PA19 P3, PA20 P4. */
+	pinmux_pwm1: pinmux_pwm1 {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 19), IOC_TYPE_IOC, 0, 17)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 20), IOC_TYPE_IOC, 0, 17)>;
+		};
+	};
+
+	/* GPIOB: PB15/PB14 = ICM-42688P-HXY INT1/INT2 (EXTI input) */
+	pinmux_gpiob: pinmux_gpiob {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 15), IOC_TYPE_IOC, 0, 0)>,
+				 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 14), IOC_TYPE_IOC, 0, 0)>;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	/* GPIOY: PY03 = User_Key (SW2, GPIO input with pull-up) */
+	pinmux_gpioy: pinmux_gpioy {
+		group0 {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 3), IOC_TYPE_IOC, 0, 0)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+};

@@ -1,0 +1,75 @@
+// HPM5361 has 32 DMA channels. Reserve 0/1 for UART3, 2 for PWM,
+// 4..7 for SPI, and give every other UART its own RX/TX pair.
+&hdma {
+    dma-channels = <32>;
+};
+
+&uart0 {
+    current-speed = <115200>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "none";
+    dmas = <&hdma 12 0x14>, <&hdma 13 0x15>;
+    dma-names = "rx", "tx";
+    status = "okay";
+};
+
+&uart1 {
+    current-speed = <115200>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "none";
+    dmas = <&hdma 8 0x16>, <&hdma 9 0x17>;
+    dma-names = "rx", "tx";
+    status = "okay";
+};
+
+&uart2 {
+    current-speed = <115200>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "none";
+    dmas = <&hdma 14 0x18>, <&hdma 15 0x19>;
+    dma-names = "rx", "tx";
+    status = "okay";
+};
+
+&uart3 {
+    current-speed = <115200>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "none";
+    dmas = <&hdma 0 0x1a>, <&hdma 1 0x1b>;
+    dma-names = "rx", "tx";
+    status = "okay";
+};
+
+&uart4 {
+    current-speed = <115200>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "none";
+    dmas = <&hdma 10 0x1c>, <&hdma 11 0x1d>;
+    dma-names = "rx", "tx";
+    status = "okay";
+};
+
+&uart5 {
+    current-speed = <115200>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "none";
+    dmas = <&hdma 16 0x1e>, <&hdma 17 0x1f>;
+    dma-names = "rx", "tx";
+    status = "okay";
+};
+
+&uart6 {
+    current-speed = <115200>;
+    data-bits = <8>;
+    stop-bits = "1";
+    parity = "none";
+    dmas = <&hdma 18 0x20>, <&hdma 19 0x21>;
+    dma-names = "rx", "tx";
+    status = "okay";
+};

@@ -1,0 +1,26 @@
+mainmenu "Dust HeavyRobot"
+
+source "Kconfig.zephyr"
+
+choice IMU_DEVICE
+    prompt "IMU device"
+    default IMU_DEVICE_ICM42688P_HXY
+
+config IMU_DEVICE_ICM42688P_HXY
+    bool "ICM-42688P-HXY"
+
+config IMU_DEVICE_HI14R3_ICM42688P_HXY
+    bool "HI14R3 + ICM-42688P-HXY"
+    help
+      Reserve the combined inertial solution. The HI14R3 driver and fusion
+      module are intentionally not included yet; the task still acquires ICM.
+
+endchoice
+
+config IMU_DEBUG_OUTPUT
+    bool "Print IMU attitude over USB"
+    default n
+    help
+      Enable the optional attitude diagnostic stream. Keep this disabled in
+      normal operation because formatted floating-point output is expensive
+      and changes the measured CPU load.

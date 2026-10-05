@@ -1,0 +1,21 @@
+# Copyright 2026 Dust HeavyHero Project
+# SPDX-License-Identifier: Apache-2.0
+
+identifier: hpm5361icb
+name: Dust HeavyHero HPM5361ICB
+type: mcu
+arch: riscv32
+toolchain:
+  - zephyr
+  - cross-compile
+ram: 288
+flash: 16384
+supported:
+  - gpio
+  - uart
+  - spi
+  - pwm
+  - dma
+  - mcan
+  - flash
+vendor: hpmicro

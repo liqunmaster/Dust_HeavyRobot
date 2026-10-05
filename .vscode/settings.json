@@ -1,0 +1,29 @@
+{
+    "cmake.sourceDirectory": ".",
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.buildType": "Debug",
+    "cmake.generator": "Ninja",
+    "cmake.configureOnOpen": false,
+    "cmake.configureArgs": [
+        "-DBOARD=hpm5361icb",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+    ],
+    "cmake.environment": {
+        "ZEPHYR_BASE": "D:/MCU/zephyr/zephyrproject/zephyr",
+        "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+        "ZEPHYR_SDK_INSTALL_DIR": "D:/MCU/zephyr/zephyr-sdk",
+        "HPM_SDK_DIR": "D:/MCU/hpm/hpm_sdk"
+    },
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "clangd.path": "D:/MCU/flash/clangd/bin/clangd.exe",
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/build",
+        "--query-driver=D:/MCU/zephyr/zephyr-sdk/gnu/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gcc.exe",
+        "--background-index",
+        "--header-insertion=never"
+    ],
+    "search.useIgnoreFiles": false,
+     "workbench.colorCustomizations": {
+        "tree.indentGuidesStroke": "#0099ff"
+    }
+}

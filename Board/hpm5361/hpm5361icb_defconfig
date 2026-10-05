@@ -1,0 +1,47 @@
+# Copyright 2026 Dust HeavyHero Project
+# SPDX-License-Identifier: Apache-2.0
+
+# execute in place support
+CONFIG_XIP=y
+CONFIG_HPM_BOOT_HEADER=y
+
+# UART3 debug console
+CONFIG_CONSOLE=y
+CONFIG_UART_CONSOLE=y
+
+# pinctrl driver
+CONFIG_PINCTRL=y
+CONFIG_PINCTRL_HPMICRO=y
+
+# GPIO driver
+CONFIG_GPIO=y
+CONFIG_GPIO_HPMICRO=y
+
+# Serial driver (UART3 printf, UART2/UART4 图传遥控)
+CONFIG_SERIAL=y
+CONFIG_UART_HPMICRO=y
+
+# DMA (hdma, UART/SPI 均使用 DMA 降低 CPU 占用)
+CONFIG_DMA=y
+CONFIG_DMAV2_HPMICRO=y
+
+# SPI1 log flash and SPI2 ICM42688P-HXY IMU
+CONFIG_SPI_HPMICRO=y
+CONFIG_SPI_HPM_SPI_DMA=y
+CONFIG_SPI_NOR=y
+
+# PWM0/PWM1 outputs
+CONFIG_PWM=y
+CONFIG_PWM_HPMICRO=y
+
+# CAN/MCAN driver (can0~can3)
+CONFIG_CAN=y
+CONFIG_MCAN_HPMICRO=y
+
+# Flash driver
+CONFIG_FLASH=y
+CONFIG_FLASH_HPMICRO=y
+CONFIG_FLASH_MAP=y
+
+# DMA 缓冲必须放在 no-cache 内存
+CONFIG_NOCACHE_MEMORY=y

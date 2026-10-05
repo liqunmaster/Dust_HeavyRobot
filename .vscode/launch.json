@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build",
+            "postDebugTask": "Reset Target",
+            "executable": "${workspaceFolder}/build/zephyr/Dust_HeavyRobot.elf",
+            "servertype": "openocd",
+            "serverpath": "D:/MCU/hpm/tools/openocd/openocd.exe",
+            "searchDir": [
+                "D:/MCU/hpm/tools/openocd/tcl",
+                "D:/MCU/hpm/hpm_sdk/boards/openocd"
+            ],
+            "configFiles": [
+                "${workspaceFolder}/Board/hpm5361/hpm5361.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 500"
+            ],
+            "gdbPath": "D:/MCU/zephyr/zephyr-sdk/gnu/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gdb.exe",
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "raw",
+            "postLaunchCommands": []
+        }
+    ]
+}

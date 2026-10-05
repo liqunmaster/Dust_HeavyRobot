@@ -1,0 +1,8 @@
+/* The DM motor's classic CAN bus defaults to 1 Mbps.
+ * For FD feedback on a dedicated bus, add bitrate-data to that controller,
+ * for example: &can2 { bitrate = <1000000>; bitrate-data = <2000000>; };
+ */
+&can0 { bitrate = <1000000>; };
+&can1 { bitrate = <1000000>; };
+&can2 { bitrate = <1000000>; };
+&can3 { bitrate = <1000000>; };

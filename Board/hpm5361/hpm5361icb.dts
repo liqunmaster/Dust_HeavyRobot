@@ -1,0 +1,395 @@
+/*
+ * Copyright 2026 Dust Robotics
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Dust HeavyHero HPM5361ICB main board.
+ * Base wiring and defaults for the custom board. Application overlays may
+ * adjust peripheral speed, bitrate and DMA settings.
+ */
+
+/dts-v1/;
+
+#include <hpmicro/hpm5361.dtsi>
+#include "hpm5361icb-pinctrl.dtsi"
+
+/* Zephyr 4.4 uses isa-base/isa-extensions; remove HPM's legacy alias. */
+&cpu0 {
+	/delete-property/ riscv,isa;
+	riscv,isa-extensions = "m", "a", "f", "c", "zicsr", "zifencei";
+};
+
+/ {
+	model = "Dust HeavyHero HPM5361ICB";
+	compatible = "hpmicro,hpm5361icb";
+
+	aliases {
+		can0 = &can0;
+	};
+
+	chosen {
+		zephyr,console = &uart3;
+		zephyr,shell-uart = &uart3;
+		zephyr,sram = &dlm;
+		zephyr,itcm = &ilm;
+		zephyr,dtcm = &dlm;
+		zephyr,flash = &flash0;
+		zephyr,flash-controller = &xpi0;
+	};
+
+	soc {
+		ahb_sram: memory@f0400000 {
+			compatible = "zephyr,memory-region";
+			reg = <0xf0400000 DT_SIZE_K(32)>;
+			zephyr,memory-region = "AHB_SRAM";
+		};
+
+		/* UART1: external connector on PY07/PY06. */
+		uart1: serial@f0044000 {
+			compatible = "hpmicro,hpm-uart";
+			reg = <0xf0044000 0x1000>;
+			interrupts = <14 1>, <5 1>;
+			interrupt-names = "uart", "idletimer";
+			clocks = <&clk CLOCK_UART1 CLK_SRC_OSC24M 1>;
+			interrupt-parent = <&plic>;
+			status = "disabled";
+		};
+
+		/* UART2: VT02/VT03 shared figure-transmission interface */
+		uart2: serial@f0048000 {
+			compatible = "hpmicro,hpm-uart";
+			reg = <0xf0048000 0x1000>;
+			interrupts = <15 1>, <5 1>;
+			interrupt-names = "uart", "idletimer";
+			clocks = <&clk CLOCK_UART2 CLK_SRC_OSC24M 1>;
+			interrupt-parent = <&plic>;
+			status = "disabled";
+		};
+
+		/* UART3: debug console / redefined printf */
+		uart3: serial@f004c000 {
+			compatible = "hpmicro,hpm-uart";
+			reg = <0xf004c000 0x1000>;
+			interrupts = <16 1>, <5 1>;
+			interrupt-names = "uart", "idletimer";
+			clocks = <&clk CLOCK_UART3 CLK_SRC_OSC24M 1>;
+			interrupt-parent = <&plic>;
+			status = "okay";
+		};
+
+		/* UART4: DT7 remote receiver */
+		uart4: serial@f0050000 {
+			compatible = "hpmicro,hpm-uart";
+			reg = <0xf0050000 0x1000>;
+			interrupts = <17 1>, <5 1>;
+			interrupt-names = "uart", "idletimer";
+			clocks = <&clk CLOCK_UART4 CLK_SRC_OSC24M 1>;
+			interrupt-parent = <&plic>;
+			status = "disabled";
+		};
+
+		/* UART5: external connector on PA23/PA22, with PA21 DE. */
+		uart5: serial@f0054000 {
+			compatible = "hpmicro,hpm-uart";
+			reg = <0xf0054000 0x1000>;
+			interrupts = <18 1>, <5 1>;
+			interrupt-names = "uart", "idletimer";
+			clocks = <&clk CLOCK_UART5 CLK_SRC_OSC24M 1>;
+			interrupt-parent = <&plic>;
+			status = "disabled";
+		};
+
+		/* UART6: external connector on PA24/PA25. */
+		uart6: serial@f0058000 {
+			compatible = "hpmicro,hpm-uart";
+			reg = <0xf0058000 0x1000>;
+			interrupts = <19 1>, <5 1>;
+			interrupt-names = "uart", "idletimer";
+			clocks = <&clk CLOCK_UART6 CLK_SRC_OSC24M 1>;
+			interrupt-parent = <&plic>;
+			status = "disabled";
+		};
+
+		/* SPI1: external W25Q128 log flash, not the XIP boot flash. */
+		spi1: spi@f0074000 {
+			compatible = "hpmicro,hpm-spi";
+			reg = <0xf0074000 0x4000>;
+			clocks = <&clk CLOCK_SPI1 CLK_SRC_OSC24M 1>;
+			interrupts = <26 1>;
+			interrupt-parent = <&plic>;
+			status = "disabled";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		/* SPI2: ICM-42688P-HXY IMU */
+		spi2: spi@f0078000 {
+			compatible = "hpmicro,hpm-spi";
+			reg = <0xf0078000 0x4000>;
+			clocks = <&clk CLOCK_SPI2 CLK_SRC_OSC24M 1>;
+			interrupts = <27 1>;
+			interrupt-parent = <&plic>;
+			status = "disabled";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			cs-sck-delay = <3>;
+			cs-minimum-high-time = <11>;
+		};
+
+		/* CAN0: friction wheels */
+		can0: can@f0280000 {
+			compatible = "hpmicro,hpm-mcan";
+			reg = <0xf0280000 0x1000>;
+			interrupts = <35 1>;
+			interrupt-parent = <&plic>;
+			clk-name = <CLOCK_CAN0>;
+			clk-source = <CLK_SRC_PLL0_CLK0>;
+			clk-divider = <10>;
+			status = "disabled";
+		};
+
+		/* CAN1: chassis */
+		can1: can@f0284000 {
+			compatible = "hpmicro,hpm-mcan";
+			reg = <0xf0284000 0x1000>;
+			interrupts = <36 1>;
+			interrupt-parent = <&plic>;
+			clk-name = <CLOCK_CAN1>;
+			clk-source = <CLK_SRC_PLL0_CLK0>;
+			clk-divider = <10>;
+			status = "disabled";
+		};
+
+		/* CAN2: gimbal / loader */
+		can2: can@f0288000 {
+			compatible = "hpmicro,hpm-mcan";
+			reg = <0xf0288000 0x1000>;
+			interrupts = <37 1>;
+			interrupt-parent = <&plic>;
+			clk-name = <CLOCK_CAN2>;
+			clk-source = <CLK_SRC_PLL0_CLK0>;
+			clk-divider = <10>;
+			status = "disabled";
+		};
+
+		/* CAN3: gimbal / loader */
+		can3: can@f028c000 {
+			compatible = "hpmicro,hpm-mcan";
+			reg = <0xf028c000 0x1000>;
+			interrupts = <38 1>;
+			interrupt-parent = <&plic>;
+			clk-name = <CLOCK_CAN3>;
+			clk-source = <CLK_SRC_PLL0_CLK0>;
+			clk-divider = <10>;
+			status = "disabled";
+		};
+
+		pwm0: pwm@f0318000 {
+			compatible = "hpmicro,hpm-pwm";
+			reg = <0xf0318000 0x4000>;
+			clocks = <&clk CLOCK_MOT0 CLOCK_AHB 1>;
+			#pwm-cells = <3>;
+			period-init = <1000>;
+			dead-zone-in-half-cycle = <0>;
+			status = "disabled";
+		};
+
+		pwm1: pwm@f031c000 {
+			compatible = "hpmicro,hpm-pwm";
+			reg = <0xf031c000 0x4000>;
+			clocks = <&clk CLOCK_MOT0 CLOCK_AHB 1>;
+			#pwm-cells = <3>;
+			period-init = <1000>;
+			dead-zone-in-half-cycle = <0>;
+			status = "disabled";
+		};
+	};
+};
+
+&uart0 {
+	pinctrl-0 = <&pinmux_uart0>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&uart1 {
+	pinctrl-0 = <&pinmux_uart1>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&uart2 {
+	pinctrl-0 = <&pinmux_uart2>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&uart3 {
+	pinctrl-0 = <&pinmux_uart3>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+};
+
+&uart4 {
+	pinctrl-0 = <&pinmux_uart4>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&uart5 {
+	pinctrl-0 = <&pinmux_uart5>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&uart6 {
+	pinctrl-0 = <&pinmux_uart6>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&spi1 {
+	pinctrl-0 = <&pinmux_spi1>;
+	pinctrl-names = "default";
+	dmas = <&hdma 4 0x2a>, <&hdma 5 0x2b>;
+	dma-names = "rx", "tx";
+	status = "okay";
+
+	w25q128: flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <12000000>;
+		jedec-id = [ef 40 18];
+		size = <134217728>;
+		status = "okay";
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			log_partition: partition@0 {
+				label = "logs";
+				reg = <0x0 DT_SIZE_M(16)>;
+			};
+		};
+	};
+};
+
+&spi2 {
+	pinctrl-0 = <&pinmux_spi2>;
+	pinctrl-names = "default";
+	/* HDMA channels 6/7 muxed to SPI2 RX/TX */
+	dmas = <&hdma 6 0x2c>, <&hdma 7 0x2d>;
+	dma-names = "rx", "tx";
+	status = "okay";
+};
+
+&pwm0 {
+	pinctrl-0 = <&pinmux_pwm0>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&pwm1 {
+	pinctrl-0 = <&pinmux_pwm1>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&can0 {
+	pinctrl-0 = <&pinmux_board_can0>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&can1 {
+	pinctrl-0 = <&pinmux_board_can1>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&can2 {
+	pinctrl-0 = <&pinmux_board_can2>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&can3 {
+	pinctrl-0 = <&pinmux_board_can3>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&gpioa {
+	status = "okay";
+};
+
+&gpiob {
+	pinctrl-0 = <&pinmux_gpiob>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&gpioy {
+	pinctrl-0 = <&pinmux_gpioy>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&hdma {
+	status = "okay";
+};
+
+&xpi0 {
+	status = "okay";
+	flash0: flash@80000000 {
+		compatible = "hpmicro,hpmicro-flash", "soc-nv-flash";
+		reg = <0x80000000 DT_SIZE_M(1)>;
+		status = "okay";
+		erase-block-size = <4096>;
+		write-block-size = <1>;
+		nor-cfg-opt-hdr = <0xfcf90002>;
+		nor-cfg-opt-opt0 = <0x05>;
+		nor-cfg-opt-opt1 = <0x1000>;
+
+		/* The SDK flash page-layout driver requires these partition labels.
+		 * They cover only the 1 MiB boot flash; this board does not use MCUboot.
+		 */
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			boot_partition: partition@3000 {
+				label = "page-layout-header";
+				reg = <0x3000 0x1000>;
+			};
+
+			slot0_partition: partition@4000 {
+				label = "page-layout-main";
+				reg = <0x4000 0xf9000>;
+			};
+
+			slot1_partition: partition@fd000 {
+				label = "reserved-slot1";
+				reg = <0xfd000 0x1000>;
+			};
+
+			scratch_partition: partition@fe000 {
+				label = "reserved-scratch";
+				reg = <0xfe000 0x1000>;
+			};
+
+			storage_partition: partition@ff000 {
+				label = "reserved-storage";
+				reg = <0xff000 0x1000>;
+			};
+		};
+	};
+};

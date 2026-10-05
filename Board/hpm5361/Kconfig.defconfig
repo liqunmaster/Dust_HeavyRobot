@@ -1,0 +1,15 @@
+# Copyright 2026 Dust HeavyHero Project
+# SPDX-License-Identifier: Apache-2.0
+
+if BOARD_HPM5361ICB
+
+config HEAP_MEM_POOL_SIZE
+	default 8192
+
+config BUILD_OUTPUT_HEX
+	default y
+
+config NOCACHE_MEMORY
+	default y
+
+endif # BOARD_HPM5361ICB

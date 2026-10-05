@@ -1,0 +1,6 @@
+#include <dt-bindings/clock/hpm5361-clocks.h>
+
+&usb0 {
+	clk-name = <CLOCK_USB0>;
+	status = "okay";
+};

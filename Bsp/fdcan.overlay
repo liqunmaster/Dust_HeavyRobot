@@ -1,0 +1,79 @@
+#include "dt-bindings/pinctrl/hpmicro-pinctrl-common.h"
+
+&pinctrl {
+	can0_default: can0-default {
+		tx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 0), IOC_TYPE_IOC, 0, 7)>;
+		};
+		rx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 1), IOC_TYPE_IOC, 0, 7)>;
+			input-enable;
+		};
+	};
+
+	can1_default: can1-default {
+		tx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 5), IOC_TYPE_IOC, 0, 7)>;
+		};
+		rx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 4), IOC_TYPE_IOC, 0, 7)>;
+			input-enable;
+		};
+	};
+
+	can2_default: can2-default {
+		tx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 0), IOC_TYPE_IOC, 0, 7)>;
+		};
+		rx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 1), IOC_TYPE_IOC, 0, 7)>;
+			input-enable;
+		};
+		pioc {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 0), IOC_TYPE_PIOC, 0, 3)>,
+					 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 1), IOC_TYPE_PIOC, 0, 3)>;
+		};
+	};
+
+	can3_default: can3-default {
+		tx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 5), IOC_TYPE_IOC, 0, 7)>;
+		};
+		rx {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 4), IOC_TYPE_IOC, 0, 7)>;
+			input-enable;
+		};
+		pioc {
+			pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 5), IOC_TYPE_PIOC, 0, 3)>,
+					 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTY, 4), IOC_TYPE_PIOC, 0, 3)>;
+		};
+	};
+};
+
+&can0 {
+	pinctrl-0 = <&can0_default>;
+	pinctrl-names = "default";
+	bitrate = <1000000>;
+	status = "okay";
+};
+
+&can1 {
+	pinctrl-0 = <&can1_default>;
+	pinctrl-names = "default";
+	bitrate = <1000000>;
+	status = "okay";
+};
+
+&can2 {
+	pinctrl-0 = <&can2_default>;
+	pinctrl-names = "default";
+	bitrate = <1000000>;
+	status = "okay";
+};
+
+&can3 {
+	pinctrl-0 = <&can3_default>;
+	pinctrl-names = "default";
+	bitrate = <1000000>;
+	status = "okay";
+};

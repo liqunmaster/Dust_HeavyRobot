@@ -1,0 +1,198 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "2b7d1465-b338-4152-a801-fe38dcd0b07d")
+	(paper "A4")
+	(lib_symbols)
+	(sheet
+		(at 14.478 49.53)
+		(size 24.384 10.922)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "0db06ac0-d0eb-4e79-a568-45c81e305113")
+		(property "Sheetname" "IO"
+			(at 14.478 48.8184 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "IO.kicad_sch"
+			(at 14.478 61.0366 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "HPM5361主控板"
+				(path "/2b7d1465-b338-4152-a801-fe38dcd0b07d"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 14.478 66.294)
+		(size 24.384 9.652)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "6260cd6f-4c2f-4f65-9b97-efd2d4ca5e34")
+		(property "Sheetname" "外设"
+			(at 14.478 65.5824 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "外设.kicad_sch"
+			(at 14.478 76.5306 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "HPM5361主控板"
+				(path "/2b7d1465-b338-4152-a801-fe38dcd0b07d"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 14.478 34.036)
+		(size 24.384 10.668)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "769195e5-cb3c-414d-8e63-5fd79cc12ebc")
+		(property "Sheetname" "USB&OSC"
+			(at 14.478 33.3244 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "USB&OSC.kicad_sch"
+			(at 14.478 45.2886 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "HPM5361主控板"
+				(path "/2b7d1465-b338-4152-a801-fe38dcd0b07d"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 14.478 16.002)
+		(size 24.384 13.208)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "7efca560-489d-40df-ae69-d56cd550a254")
+		(property "Sheetname" "power"
+			(at 14.478 15.2904 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "power.kicad_sch"
+			(at 14.478 29.7946 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "HPM5361主控板"
+				(path "/2b7d1465-b338-4152-a801-fe38dcd0b07d"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

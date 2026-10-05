@@ -1,0 +1,6 @@
+board:
+  name: hpm5361icb
+  full_name: Dust HeavyHero HPM5361ICB
+  vendor: hpmicro
+  socs:
+    - name: hpm5361
