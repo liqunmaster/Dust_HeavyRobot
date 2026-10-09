@@ -1,18 +1,25 @@
 # Health Monitor
 
-本目录目前负责监测 CPU 负载，并通过板载 WS2812B 显示负载水平。设备离线检测、故障处理等功能尚未在此目录实现。
+本目录监测 CPU 负载和已绑定 CAN 电机的有效反馈，并通过板载 WS2812B 显示 CPU 负载水平。
 
 ## 文件
 
 - `cpu_usage.hpp`：提供 `cpu_usage` 采样类和 `cpu_usage_supervisor()` 调用入口。
+- `motor_health.hpp/.cpp`：电机离线检测与恢复周期入口。
 - `CMakeLists.txt`：将本目录加入应用的头文件搜索路径。
 
 ## CPU 负载显示
 
-`App/core/main.cpp` 的主循环调用 `cpu_usage_supervisor()`。该函数自身不创建线程：每次读取统计计数并休眠 500 ms。首次调用仅建立采样基线，从第二次调用起更新 LED。
+`App/main.cpp` 的主循环每 10 ms 调用 `health_monitor_poll()`，其中的 `cpu_usage_supervisor()` 自身不创建线程，每 500 ms 更新一次 LED。
 
-负载来自 Zephyr 的 `k_thread_runtime_stats_all_get()`。`execution_cycles` 包含忙碌和空闲周期，`total_cycles` 是忙碌周期；两次采样的差值计算为 `负载 = 忙碌周期差 / 总周期差 * 100%`。计数器回退或采样区间无效时丢弃该次结果并重新建立基线。首次采样与暂时无效的采样不改变 LED；统计 API 失败或功能未启用时 LED 熄灭。
+负载来自 Zephyr 的 `cpu_load_get(true)`，使用 idle hook 后端按采样区间计算 CPU 忙碌比例。采样失败时 LED 熄灭。
 
 WS2812B 使用四分之一权重的指数平滑值显示负载，颜色从绿过渡到黄、再到红：0% 为绿色，50% 为黄色，100% 为红色。`sample()` 返回未经平滑的区间负载。红色和绿色通道的最大值为 126，蓝色通道始终为 0。LED 的实际发送由 `Device/ws2812b` 和 `Bsp/bsp_pwm` 完成。
 
-本功能依赖 `prj.conf` 中的 `CONFIG_THREAD_RUNTIME_STATS=y` 和 `CONFIG_SCHED_THREAD_USAGE_ALL=y`。这里显示的是采样区间内的 CPU 忙碌比例，并非单次函数调用的耗时。
+本功能依赖 `prj.conf` 中的 `CONFIG_CPU_LOAD=y` 和 `CONFIG_CPU_LOAD_BACKEND_IDLE_HOOK=y`，不依赖线程运行统计。LED 显示的是采样区间内的 CPU 忙碌比例，并非单次函数调用的耗时。
+
+## 电机离线恢复
+
+`main()` 在电机绑定后调用 `motor_health_init()`，随后在现有主循环调用 `motor_health_poll()`。该函数每 10 ms 扫描 `fdcan_port` 中的已绑定电机；C610/C620 根据自主反馈超时记录离线状态，底盘任务根据反馈新鲜度独立决定是否输出电流。DM 拨弹电机由 `App/app_booster.cpp` 的状态机恢复。CubeMars 首次发送使能帧后等待反馈，收到使能帧之后的有效反馈才开始发送控制帧。首次使能或控制期间超过 100 ms 未收到有效反馈，就按 `CUBEMARS_RECOVERY_PERIOD_MS` 重复发送使能帧；恢复反馈后继续正常控制。
+
+底盘的 0x200 电流帧只由底盘任务构建和发布；没有新运动指令时每 20 ms 发送一次零电流帧。健康监测不另发恢复电流帧。超时与重发周期可在 `motor_health.hpp` 中调整。CAN bus-off 和发送卡住由 `fdcan_port` 的总线状态恢复逻辑处理，电机离线监控只处理单电机的反馈缺失。

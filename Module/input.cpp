@@ -26,6 +26,12 @@ namespace
 
     bool has_sample[3]{};
 
+    struct sample_sink
+    {
+        input_stream_parser::sample_callback callback;
+        void *context;
+    };
+
     int sample_index(remote_protocol protocol)
     {
         switch (protocol) {
@@ -40,7 +46,7 @@ namespace
         }
     }
 
-    void store_sample(const input_sample &sample, void *)
+    void store_sample(const input_sample &sample, void *context)
     {
         const int index = sample_index(sample.protocol);
         if (index < 0) {
@@ -51,10 +57,15 @@ namespace
         has_sample[index] = true;
         k_spin_unlock(&sample_lock, key);
         atomic_inc(&feedback_count);
+        const auto &sink = *static_cast<sample_sink *>(context);
+        if (sink.callback != nullptr) {
+            sink.callback(sample, sink.context);
+        }
     }
 }
 
-void input_process_chunk(const remote_rx_chunk &chunk)
+void input_process_chunk(const remote_rx_chunk &chunk,
+                         input_stream_parser::sample_callback on_sample, void *context)
 {
     const size_t index = chunk.source == remote_uart_source::uart1 ? 0U : 1U;
     auto &stream = streams[index];
@@ -63,7 +74,8 @@ void input_process_chunk(const remote_rx_chunk &chunk)
     }
     stream.last_rx_ms = chunk.timestamp_ms;
     stream.has_rx = chunk.length != 0U;
-    stream.parser.feed(chunk.bytes, chunk.length, chunk.timestamp_ms, store_sample, nullptr);
+    sample_sink sink{on_sample, context};
+    stream.parser.feed(chunk.bytes, chunk.length, chunk.timestamp_ms, store_sample, &sink);
 }
 
 void input_expire_partial_frames(uint32_t now_ms)
@@ -99,10 +111,4 @@ int input_get_sample(remote_protocol protocol, input_sample &sample)
 uint32_t input_feedback_count()
 {
     return static_cast<uint32_t>(atomic_get(&feedback_count));
-}
-
-int input_map_command(const input_sample &, RemoteTopicData &command)
-{
-    command = {};
-    return -ENOTSUP;
 }

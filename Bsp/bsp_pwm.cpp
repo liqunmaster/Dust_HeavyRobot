@@ -17,7 +17,6 @@ static uint64_t clock_hz;
 static uint32_t period_ticks;
 static uint32_t trigger_ticks;
 static uint32_t period_setting;
-static volatile int dma_result;
 static bool initialized;
 
 static uint32_t ns_to_ticks(uint32_t ns)
@@ -30,7 +29,7 @@ static void pwm_dma_callback(const struct device *dev, void *user_data, uint32_t
     (void)dev;
     (void)user_data;
     (void)channel;
-    dma_result = status;
+    (void)status;
     k_sem_give(&dma_done);
 }
 
@@ -103,22 +102,22 @@ int bsp_pwm_init(uint32_t period_ns)
     return 0;
 }
 
-int bsp_pwm_write(const uint16_t *high_ns, size_t count)
+void bsp_pwm_write(const uint16_t *high_ns, size_t count)
 {
     if (high_ns == NULL || count == 0U || count > BSP_PWM_MAX_PULSES) {
-        return -EINVAL;
+        return;
     }
     k_mutex_lock(&pwm_lock, K_FOREVER);
     if (!initialized) {
         k_mutex_unlock(&pwm_lock);
-        return -ENODEV;
+        return;
     }
 
     for (size_t i = 0U; i < count; ++i) {
         const uint32_t ticks = ns_to_ticks(high_ns[i]);
         if (ticks == 0U || ticks >= trigger_ticks) {
             k_mutex_unlock(&pwm_lock);
-            return -EINVAL;
+            return;
         }
         dma_words[i] = PWM_CMP_CMP_SET(ticks);
     }
@@ -146,7 +145,6 @@ int bsp_pwm_write(const uint16_t *high_ns, size_t count)
     config.dma_callback = pwm_dma_callback;
 
     k_sem_reset(&dma_done);
-    dma_result = 0;
     int result = dma_config(dma_device, PWM_DMA_CHANNEL, &config);
     if (result == 0) {
         result = dma_start(dma_device, PWM_DMA_CHANNEL);
@@ -158,10 +156,7 @@ int bsp_pwm_write(const uint16_t *high_ns, size_t count)
         pwm_clear_status(HPM_PWM0, PWM_IRQ_CMP(PWM_TRIGGER_CMP));
         pwm_enable_dma_request(HPM_PWM0, PWM_IRQ_CMP(PWM_TRIGGER_CMP));
         pwm_start_counter(HPM_PWM0);
-        result = k_sem_take(&dma_done, K_MSEC(2));
-        if (result == 0) {
-            result = dma_result;
-        }
+        k_sem_take(&dma_done, K_MSEC(2));
     }
 
     pwm_disable_dma_request(HPM_PWM0, PWM_IRQ_CMP(PWM_TRIGGER_CMP));
@@ -180,5 +175,4 @@ int bsp_pwm_write(const uint16_t *high_ns, size_t count)
     k_busy_wait(80U);
 
     k_mutex_unlock(&pwm_lock);
-    return result;
 }

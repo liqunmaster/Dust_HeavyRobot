@@ -24,7 +24,8 @@ echo [2/2] Use HPMicro official OpenOCD with HPM5361 board config ...
 "%HPM_OPENOCD%" ^
     -s "%HPM_OPENOCD_TCL%" ^
     -f "%HPM_BOARD_CFG%" ^
-    -c "adapter speed 500" ^
+    -c "adapter speed 100" ^
+    -c "hpm5361.cpu0 configure -work-area-phys 0x0 -work-area-size 0x20000 -work-area-backup 0" ^
     -c "program {%HPM_ELF%} verify reset exit"
 if errorlevel 1 exit /b 1
 

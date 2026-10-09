@@ -98,7 +98,7 @@ namespace alg
         const float i_output = config_.ki * integral_error_;
 
         float d_raw = 0.0F;
-        if (initialized_) {
+        if (initialized_ && config_.kd != 0.0F) {
             if (config_.derivative_on_measurement == DFirst::Enable) {
                 d_raw = -config_.kd * (measurement - previous_measurement_) / dt;
             } else {
@@ -114,7 +114,8 @@ namespace alg
             derivative_output_ = d_raw;
         }
 
-        const float feedforward = initialized_ ? config_.kf * (target - previous_target_) / dt : 0.0F;
+        const float feedforward = initialized_ && config_.kf != 0.0F ?
+            config_.kf * (target - previous_target_) / dt : 0.0F;
         const float unclamped_output = p_output + i_output + derivative_output_ + feedforward;
         output_ = clamp_abs(unclamped_output, config_.output_limit);
         if (output_ != unclamped_output && config_.ki != 0.0F && integral_rate > 0.0F) {

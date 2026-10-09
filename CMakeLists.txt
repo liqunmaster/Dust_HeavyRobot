@@ -2,6 +2,35 @@ cmake_minimum_required(VERSION 3.20.0)
 
 set(ZEPHYR_EXTRA_MODULES "D:/MCU/hpm/zephyr_sdk_glue")
 
+# The external HPM MCAN driver must report one-shot TX cancellations.
+set(HPM_MCAN_DRIVER "${ZEPHYR_EXTRA_MODULES}/drivers/can/mcan_hpmicro.c")
+if(NOT EXISTS "${HPM_MCAN_DRIVER}")
+    message(FATAL_ERROR "HPM MCAN driver not found: ${HPM_MCAN_DRIVER}")
+endif()
+file(READ "${HPM_MCAN_DRIVER}" HPM_MCAN_DRIVER_SOURCE)
+string(FIND "${HPM_MCAN_DRIVER_SOURCE}" "mcan_is_tx_buf_cancellation_finished(can, 0)" HPM_MCAN_CANCEL_CHECK)
+string(FIND "${HPM_MCAN_DRIVER_SOURCE}" "txbuf_cancel_finish_interrupt_mask = 1U" HPM_MCAN_CANCEL_IRQ)
+if(HPM_MCAN_CANCEL_CHECK EQUAL -1 OR HPM_MCAN_CANCEL_IRQ EQUAL -1)
+    message(FATAL_ERROR "HPM MCAN cancellation fix is missing; apply patches/hpm-mcan-tx-cancel.patch in ${ZEPHYR_EXTRA_MODULES}")
+endif()
+string(FIND "${HPM_MCAN_DRIVER_SOURCE}" "mcan_get_rxfifo_fill_level(can, 0)" HPM_MCAN_FIFO0_DRAIN)
+string(FIND "${HPM_MCAN_DRIVER_SOURCE}" "mcan_get_rxfifo_fill_level(can, 1)" HPM_MCAN_FIFO1_DRAIN)
+if(HPM_MCAN_FIFO0_DRAIN EQUAL -1 OR HPM_MCAN_FIFO1_DRAIN EQUAL -1)
+    message(FATAL_ERROR "HPM MCAN RX FIFO drain fix is missing; apply patches/hpm-mcan-rx-fifo-drain.patch in ${ZEPHYR_EXTRA_MODULES}")
+endif()
+unset(HPM_MCAN_DRIVER_SOURCE)
+
+set(HPM_SPI_DRIVER "${ZEPHYR_EXTRA_MODULES}/drivers/spi/spi_hpmicro.c")
+if(NOT EXISTS "${HPM_SPI_DRIVER}")
+    message(FATAL_ERROR "HPM SPI driver not found: ${HPM_SPI_DRIVER}")
+endif()
+file(READ "${HPM_SPI_DRIVER}" HPM_SPI_DRIVER_SOURCE)
+string(FIND "${HPM_SPI_DRIVER_SOURCE}" "tx_bufs->buffers[0].len <= 32U" HPM_SPI_SMALL_PIO)
+if(HPM_SPI_SMALL_PIO EQUAL -1)
+    message(FATAL_ERROR "HPM SPI small-transfer PIO fix is missing; apply patches/hpm-spi-small-transfer-pio.patch in ${ZEPHYR_EXTRA_MODULES}")
+endif()
+unset(HPM_SPI_DRIVER_SOURCE)
+
 set(HPM_SDK_DIR "D:/MCU/hpm/hpm_sdk" CACHE PATH "")
 
 set(CONF_FILE

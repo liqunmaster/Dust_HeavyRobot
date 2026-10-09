@@ -178,7 +178,9 @@ int cubemars::process_feedback(const fdcan_frame &frame)
     if (frame.id != feedback_id()) {
         return -ENOMSG;
     }
-    if (frame.id_type != FDCAN_ID_STANDARD || frame.protocol != FDCAN_PROTOCOL_CLASSIC || frame.length != 8U) {
+    // CubeMars MIT feedback is a six-byte payload: id + p16 + v12 + t12.
+    if (frame.id_type != FDCAN_ID_STANDARD || frame.protocol != FDCAN_PROTOCOL_CLASSIC ||
+        frame.length != 6U) {
         return -EBADMSG;
     }
 

@@ -75,7 +75,7 @@ extern Uart uart6;
 
 Uart *bsp_uart_get(const struct device *device);
 
-int bsp_uart_init(const struct device *device = nullptr);
+void bsp_uart_init(const struct device *device = nullptr);
 
 int bsp_uart_receive(void *data, size_t length, const struct device *device = nullptr);
 

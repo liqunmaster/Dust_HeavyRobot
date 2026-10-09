@@ -1,13 +1,17 @@
 #include "fdcan_port.hpp"
 
+#include <string.h>
+
 namespace
 {
-    constexpr size_t max_motors = 32U;
-    constexpr size_t max_periodic_frames = 32U;
+    constexpr size_t max_motors = FDCAN_PORT_MAX_MOTORS;
+    constexpr size_t max_raw_subscriptions = 32U;
+    constexpr size_t max_rx_slots = max_motors + max_raw_subscriptions;
+    static_assert(max_rx_slots <= UINT8_MAX);
+    constexpr size_t max_periodic_frames = FDCAN_CONTROL_SLOT_COUNT;
     constexpr size_t one_shot_depth = 8U;
-    constexpr size_t rx_batch = 16U;
-    constexpr size_t rx_depth = 32U;
-    constexpr uint8_t tx_timeout_ticks = 3U;
+    constexpr size_t standard_id_count = 0x800U;
+    constexpr uint32_t tx_timeout_ms = 5U;
 
     enum class motor_kind : uint8_t
     {
@@ -21,6 +25,21 @@ namespace
     {
         fdcan_device bus;
         fdcan_frame frame;
+        uint32_t timestamp_ms;
+    };
+
+    struct raw_feedback
+    {
+        uint8_t data[8];
+        uint8_t length;
+        uint32_t timestamp_ms;
+        uint32_t generation;
+    };
+
+    struct raw_subscription
+    {
+        fdcan_device bus;
+        uint32_t id;
     };
 
     struct motor_entry
@@ -33,6 +52,13 @@ namespace
         fdcan_protocol protocol;
         uint8_t motor_id;
         atomic_t received_count;
+        uint32_t request_count;
+        uint32_t response_count;
+        uint32_t pending_since_ms;
+        bool offline;
+        bool enable_pending;
+        bool enable_acknowledged;
+        bool automatic_recovery;
     };
 
     struct periodic_entry
@@ -53,29 +79,104 @@ namespace
         uint8_t count;
     };
 
-    alignas(4) char rx_storage[sizeof(rx_item) * rx_depth];
-    struct k_msgq rx_queue{};
+    struct inflight_frame
+    {
+        bool used;
+        bool admin;
+        fdcan_frame frame;
+        size_t slot;
+        uint32_t generation;
+        uint32_t started_ms;
+    };
+
     K_SEM_DEFINE(port_sem, 0, 1);
     K_MUTEX_DEFINE(init_lock);
+    K_MUTEX_DEFINE(feedback_decode_lock);
     K_THREAD_STACK_DEFINE(port_stack, 2048);
 
     struct k_thread port_thread;
     struct k_timer port_timer;
     struct k_spinlock motor_lock;
     struct k_spinlock tx_lock;
+    struct k_spinlock rx_lock;
     motor_entry motors[max_motors]{};
+    uint8_t rx_routes[FDCAN_DEVICE_COUNT][standard_id_count]{};
+    uint8_t next_rx_route[max_rx_slots]{};
+    raw_feedback raw_feedbacks[max_rx_slots]{};
+    uint32_t processed_generation[max_rx_slots]{};
+    raw_subscription raw_subscriptions[max_raw_subscriptions]{};
+    size_t raw_subscription_count = 0U;
+    size_t motor_count = 0U;
     periodic_entry periodic[max_periodic_frames]{};
     one_shot_queue one_shots[FDCAN_DEVICE_COUNT]{};
+    inflight_frame inflight[FDCAN_DEVICE_COUNT]{};
     size_t next_periodic[FDCAN_DEVICE_COUNT]{};
-    uint8_t tx_pending_ticks[FDCAN_DEVICE_COUNT]{};
+    uint32_t submit_failure_since_ms[FDCAN_DEVICE_COUNT]{};
+    bool submit_failure_active[FDCAN_DEVICE_COUNT]{};
+    atomic_t tx_result[FDCAN_DEVICE_COUNT]{};
     atomic_t tick_due{};
+    atomic_t tx_due{};
+    atomic_t ready_bus_mask{};
     atomic_t rx_dropped{};
-    atomic_t rx_queued{};
-    atomic_t rx_paused[FDCAN_DEVICE_COUNT]{};
     atomic_t tx_errors{};
     atomic_t control_send_dropped{};
-    bool initialized = false;
+    atomic_t initialized{};
     bool bus_registered[FDCAN_DEVICE_COUNT]{};
+
+    bool cube_enable_frame(const fdcan_frame &frame)
+    {
+        if (frame.id_type != FDCAN_ID_STANDARD || frame.id != 0x01U ||
+            frame.protocol != FDCAN_PROTOCOL_CLASSIC || frame.length != 8U || frame.data[7] != 0xFCU) {
+            return false;
+        }
+        for (uint8_t index = 0U; index < 7U; ++index) {
+            if (frame.data[index] != 0xFFU) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void mark_cube_request_sent(fdcan_device bus, const fdcan_frame &frame)
+    {
+        const uint32_t now_ms = k_uptime_get_32();
+        const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+        for (motor_entry &entry : motors) {
+            if (!entry.used || entry.kind != motor_kind::cubemars || entry.bus != bus) {
+                continue;
+            }
+            if (entry.request_count == entry.response_count) {
+                entry.pending_since_ms = now_ms;
+            }
+            ++entry.request_count;
+            if (cube_enable_frame(frame)) {
+                entry.enable_pending = true;
+            }
+            break;
+        }
+        k_spin_unlock(&motor_lock, key);
+    }
+
+    void mark_cube_response(void *motor)
+    {
+        const uint32_t now_ms = k_uptime_get_32();
+        const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+        for (motor_entry &entry : motors) {
+            if (entry.used && entry.kind == motor_kind::cubemars && entry.motor == motor &&
+                entry.response_count < entry.request_count) {
+                ++entry.response_count;
+                // A response proves the motor is alive. If requests are still
+                // outstanding, restart the no-response window from this frame.
+                entry.pending_since_ms = entry.response_count < entry.request_count ? now_ms : 0U;
+                if (entry.enable_pending) {
+                    entry.enable_acknowledged = true;
+                    entry.enable_pending = false;
+                }
+                break;
+            }
+        }
+        k_spin_unlock(&motor_lock, key);
+    }
 
     bool valid_bus(fdcan_device bus)
     {
@@ -99,55 +200,103 @@ namespace
         return frame.protocol == FDCAN_PROTOCOL_FD && frame.length <= FDCAN_MAX_DATA_LENGTH;
     }
 
-    void pause_rx(fdcan_device bus)
+    bool cube_control_blocked(const FdcanControlTopicData &control)
     {
-        atomic_inc(&rx_dropped);
-        if (!valid_bus(bus)) {
-            return;
+        if (control.frame.id_type != FDCAN_ID_STANDARD || control.frame.id != 0x01U ||
+            control.frame.protocol != FDCAN_PROTOCOL_CLASSIC) {
+            return false;
         }
-        atomic_set(&rx_paused[bus], 1);
-        (void)bsp_fdcan_set_rx_interrupt(bus, false);
+        const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+        for (const motor_entry &entry : motors) {
+            if (entry.used && entry.kind == motor_kind::cubemars && entry.bus == control.bus) {
+                const bool blocked = entry.offline || !entry.enable_acknowledged;
+                k_spin_unlock(&motor_lock, key);
+                return blocked;
+            }
+        }
+        k_spin_unlock(&motor_lock, key);
+        return false;
     }
 
-    void rx_callback(fdcan_device bus, const fdcan_frame *frame, void *)
+    void rx_callback(fdcan_device bus, const fdcan_rx_view *frame, void *)
     {
-        if (frame == nullptr) {
+        if (!valid_bus(bus) || frame == nullptr || frame->id_type != FDCAN_ID_STANDARD ||
+            frame->id >= standard_id_count || frame->length > 8U) {
             return;
         }
-        if (atomic_get(&rx_queued) >= rx_depth) {
-            pause_rx(bus);
+        uint8_t matched[max_rx_slots]{};
+        size_t count = 0U;
+        const k_spinlock_key_t motor_key = k_spin_lock(&motor_lock);
+        uint8_t route = rx_routes[bus][frame->id];
+        while (route != 0U) {
+            const size_t index = route - 1U;
+            bool accepts = false;
+            if (index < max_motors) {
+                const motor_entry &entry = motors[index];
+                accepts = frame->length >= 6U && entry.used && entry.bus == bus &&
+                    entry.feedback_id == frame->id && entry.protocol == frame->protocol &&
+                    (entry.kind != motor_kind::dm || (frame->data[0] & 0x0FU) == entry.motor_id);
+            } else {
+                const raw_subscription &entry = raw_subscriptions[index - max_motors];
+                accepts = entry.bus == bus && entry.id == frame->id &&
+                    frame->protocol == FDCAN_PROTOCOL_CLASSIC;
+            }
+            if (accepts) {
+                matched[count++] = static_cast<uint8_t>(index);
+            }
+            route = next_rx_route[index];
+        }
+        k_spin_unlock(&motor_lock, motor_key);
+        if (count == 0U) {
+            atomic_inc(&rx_dropped);
             return;
         }
-        const rx_item item{bus, *frame};
-        if (k_msgq_put(&rx_queue, &item, K_NO_WAIT) != 0) {
-            pause_rx(bus);
-            return;
+        const uint32_t timestamp_ms = k_uptime_get_32();
+        for (size_t matched_index = 0U; matched_index < count; ++matched_index) {
+            const size_t slot = matched[matched_index];
+            const k_spinlock_key_t rx_key = k_spin_lock(&rx_lock);
+            raw_feedback &target = raw_feedbacks[slot];
+            if (target.generation != processed_generation[slot]) {
+                atomic_inc(&rx_dropped);
+            }
+            memcpy(target.data, frame->data, sizeof(target.data));
+            target.length = frame->length;
+            target.timestamp_ms = timestamp_ms;
+            ++target.generation;
+            k_spin_unlock(&rx_lock, rx_key);
+            if (slot < max_motors) {
+                atomic_inc(&motors[slot].received_count);
+            }
         }
-        atomic_inc(&rx_queued);
     }
 
     void timer_callback(struct k_timer *)
     {
+        if (atomic_get(&ready_bus_mask) == 0) {
+            return;
+        }
         atomic_set(&tick_due, 1);
         k_sem_give(&port_sem);
     }
 
-    void tx_callback(fdcan_device, int error, void *)
+    void tx_callback(fdcan_device bus, int error, void *)
     {
         if (error != 0) {
             atomic_inc(&tx_errors);
         }
+        atomic_set(&tx_result[bus], error == 0 ? 1 : 2);
+        atomic_set(&tx_due, 1);
         k_sem_give(&port_sem);
     }
 
-    void control_notify()
+    int topic_control_sink(const FdcanControlTopicData &control)
     {
-        k_sem_give(&port_sem);
+        return fdcan_port_submit(control.bus, control.frame);
     }
 
     void dispatch(const rx_item &item)
     {
-        if (item.frame.id_type != FDCAN_ID_STANDARD || item.frame.length != 8U) {
+        if (item.frame.id_type != FDCAN_ID_STANDARD || item.frame.length < 6U) {
             return;
         }
 
@@ -162,7 +311,6 @@ namespace
                 continue;
             }
 
-            atomic_inc(&entry.received_count);
             kind = entry.kind;
             motor = entry.motor;
             break;
@@ -175,6 +323,7 @@ namespace
         FdcanFeedbackTopicData feedback{};
         feedback.bus = item.bus;
         feedback.id = item.frame.id;
+        feedback.timestamp_ms = item.timestamp_ms;
         int result = -ENOMSG;
         switch (kind) {
             case motor_kind::c610:
@@ -211,190 +360,286 @@ namespace
                 }
                 break;
             case motor_kind::cubemars:
-                (void)static_cast<cubemars *>(motor)->process_feedback(item.frame);
-                return;
+                result = static_cast<cubemars *>(motor)->process_feedback(item.frame);
+                if (result == 0) {
+                    const CubemarsData data = static_cast<cubemars *>(motor)->get_data();
+                    feedback.kind = FdcanMotorKind::cubemars;
+                    feedback.speed_rad_s = data.now_omega;
+                    feedback.angle_rad = data.now_total_angle;
+                    feedback.torque_nm = data.now_torque;
+                    feedback.valid_count = static_cast<cubemars *>(motor)->get_feedback_count();
+                }
+                break;
+        }
+        if (result == 0 && kind == motor_kind::cubemars) {
+            mark_cube_response(motor);
         }
         if (result == 0 && !(kind == motor_kind::dm && item.frame.data[0] == static_cast<dm_motor *>(motor)->motor_id() && item.frame.data[1] == 0U && item.frame.data[2] == 0x55U && item.frame.data[3] == 0x0AU)) {
-            (void)fdcan_topic_publish_feedback(feedback);
+            fdcan_topic_publish_feedback(feedback);
         }
     }
 
-    void drain_rx()
+    void refresh_feedback_locked(fdcan_device bus, uint32_t id, FdcanMotorKind kind)
     {
-        rx_item item{};
-        size_t processed = 0U;
-        while (processed < rx_batch && k_msgq_get(&rx_queue, &item, K_NO_WAIT) == 0) {
-            atomic_dec(&rx_queued);
-            dispatch(item);
-            ++processed;
-        }
-        if (atomic_get(&rx_queued) <= rx_depth / 2U) {
-            for (uint8_t index = 0U; index < FDCAN_DEVICE_COUNT; ++index) {
-                if (atomic_cas(&rx_paused[index], 1, 0)) {
-                    (void)bsp_fdcan_set_rx_interrupt(static_cast<fdcan_device>(index), true);
-                }
-            }
-        }
-        if (processed == rx_batch) {
-            k_sem_give(&port_sem);
-        }
-    }
-
-    void drain_control()
-    {
-        FdcanControlTopicData control{};
-        FdcanControlTopicData latest[8]{};
-        size_t latest_count = 0U;
-        size_t processed = 0U;
-        while (processed < 8U && fdcan_topic_receive_control(control) == 0) {
-            ++processed;
-            if (!valid_bus(control.bus) || !bus_registered[control.bus] || !valid_frame(control.frame)) {
-                atomic_inc(&control_send_dropped);
-                continue;
-            }
-            size_t slot = 0U;
-            while (slot < latest_count && (latest[slot].bus != control.bus || latest[slot].frame.id != control.frame.id || latest[slot].frame.id_type != control.frame.id_type)) {
-                ++slot;
-            }
-            if (slot == latest_count) {
-                ++latest_count;
-            }
-            latest[slot] = control;
-        }
-        for (size_t index = 0U; index < latest_count; ++index) {
-            const int ret = bsp_fdcan_transmit(latest[index].bus, &latest[index].frame, FDCAN_NO_WAIT);
-            if (ret != 0) {
-                atomic_inc(&control_send_dropped);
-            }
-        }
-        if (processed == 8U) {
-            k_sem_give(&port_sem);
-        }
-    }
-
-    bool send_one_shot(fdcan_device bus)
-    {
-        fdcan_frame frame{};
-        const k_spinlock_key_t key = k_spin_lock(&tx_lock);
-        one_shot_queue &queue = one_shots[bus];
-        if (queue.count == 0U) {
-            k_spin_unlock(&tx_lock, key);
-            return false;
-        }
-        frame = queue.frames[queue.head];
-        k_spin_unlock(&tx_lock, key);
-
-        const int ret = bsp_fdcan_transmit(bus, &frame, FDCAN_NO_WAIT);
-        if (ret == -EAGAIN || ret == -EBUSY) {
-            return true;
-        }
-
-        const k_spinlock_key_t done_key = k_spin_lock(&tx_lock);
-        queue.head = static_cast<uint8_t>((queue.head + 1U) % one_shot_depth);
-        --queue.count;
-        k_spin_unlock(&tx_lock, done_key);
-        if (ret != 0) {
-            atomic_inc(&tx_errors);
-        }
-        return true;
-    }
-
-    void send_periodic(fdcan_device bus)
-    {
-        fdcan_frame frame{};
-        uint32_t generation = 0U;
-        size_t selected = max_periodic_frames;
-
-        const k_spinlock_key_t key = k_spin_lock(&tx_lock);
-        for (size_t offset = 0U; offset < max_periodic_frames; ++offset) {
-            const size_t index = (next_periodic[bus] + offset) % max_periodic_frames;
-            if (periodic[index].used && periodic[index].pending && periodic[index].eligible && periodic[index].bus == bus) {
-                selected = index;
-                frame = periodic[index].frame;
-                generation = periodic[index].generation;
-                next_periodic[bus] = (index + 1U) % max_periodic_frames;
+        size_t slot = max_motors;
+        const k_spinlock_key_t motor_key = k_spin_lock(&motor_lock);
+        for (size_t index = 0U; index < motor_count; ++index) {
+            const motor_entry &entry = motors[index];
+            if (entry.used && entry.bus == bus && entry.feedback_id == id &&
+                static_cast<uint8_t>(entry.kind) == static_cast<uint8_t>(kind)) {
+                slot = index;
                 break;
             }
         }
-        k_spin_unlock(&tx_lock, key);
-        if (selected == max_periodic_frames) {
-            return;
-        }
-
-        const int ret = bsp_fdcan_transmit(bus, &frame, FDCAN_NO_WAIT);
-        if (ret == -EAGAIN || ret == -EBUSY) {
-            return;
-        }
-
-        const k_spinlock_key_t done_key = k_spin_lock(&tx_lock);
-        periodic[selected].eligible = false;
-        if (periodic[selected].generation == generation) {
-            periodic[selected].pending = false;
-        }
-        k_spin_unlock(&tx_lock, done_key);
-        if (ret != 0) {
-            atomic_inc(&tx_errors);
+        k_spin_unlock(&motor_lock, motor_key);
+        if (slot != max_motors) {
+            raw_feedback snapshot{};
+            bool changed = false;
+            const k_spinlock_key_t rx_key = k_spin_lock(&rx_lock);
+            snapshot = raw_feedbacks[slot];
+            changed = snapshot.generation != processed_generation[slot];
+            if (changed) {
+                processed_generation[slot] = snapshot.generation;
+            }
+            k_spin_unlock(&rx_lock, rx_key);
+            if (changed) {
+                rx_item item{};
+                item.bus = bus;
+                item.timestamp_ms = snapshot.timestamp_ms;
+                item.frame.id = id;
+                item.frame.id_type = FDCAN_ID_STANDARD;
+                item.frame.protocol = motors[slot].protocol;
+                item.frame.length = snapshot.length;
+                memcpy(item.frame.data, snapshot.data, snapshot.length);
+                dispatch(item);
+            }
         }
     }
 
-    void release_periodic()
+    void refresh_feedback(fdcan_device bus, uint32_t id, FdcanMotorKind kind)
     {
+        k_mutex_lock(&feedback_decode_lock, K_FOREVER);
+        refresh_feedback_locked(bus, id, kind);
+        k_mutex_unlock(&feedback_decode_lock);
+    }
+
+    void refresh_feedback_batch(const FdcanFeedbackKey *keys, size_t count)
+    {
+        k_mutex_lock(&feedback_decode_lock, K_FOREVER);
+        for (size_t index = 0; index < count; ++index) {
+            refresh_feedback_locked(keys[index].bus, keys[index].id, keys[index].kind);
+        }
+        k_mutex_unlock(&feedback_decode_lock);
+    }
+
+    int stage_control(const FdcanControlTopicData &control)
+    {
+        if (cube_control_blocked(control)) {
+            const k_spinlock_key_t key = k_spin_lock(&tx_lock);
+            for (periodic_entry &entry : periodic) {
+                if (entry.used && entry.bus == control.bus && entry.frame.id == control.frame.id &&
+                    entry.frame.id_type == control.frame.id_type &&
+                    entry.frame.protocol == control.frame.protocol) {
+                    entry.pending = false;
+                    entry.eligible = false;
+                    ++entry.generation;
+                    break;
+                }
+            }
+            k_spin_unlock(&tx_lock, key);
+            return 0;
+        }
         const k_spinlock_key_t key = k_spin_lock(&tx_lock);
+        periodic_entry *slot = nullptr;
+        periodic_entry *free_slot = nullptr;
+        periodic_entry *idle_slot = nullptr;
         for (periodic_entry &entry : periodic) {
-            if (entry.used && entry.pending) {
-                entry.eligible = true;
+            if (!entry.used) {
+                if (free_slot == nullptr) {
+                    free_slot = &entry;
+                }
+            } else if (entry.bus == control.bus && entry.frame.id == control.frame.id &&
+                       entry.frame.id_type == control.frame.id_type &&
+                       entry.frame.protocol == control.frame.protocol) {
+                slot = &entry;
+                break;
+            } else if (!entry.pending && idle_slot == nullptr) {
+                idle_slot = &entry;
+            }
+        }
+        if (slot == nullptr) {
+            slot = free_slot != nullptr ? free_slot : idle_slot;
+        }
+        if (slot == nullptr) {
+            k_spin_unlock(&tx_lock, key);
+            return -ENOSPC;
+        }
+        slot->used = true;
+        slot->pending = true;
+        slot->eligible = true;
+        slot->bus = control.bus;
+        slot->frame = control.frame;
+        ++slot->generation;
+        atomic_or(&ready_bus_mask, BIT(control.bus));
+        k_spin_unlock(&tx_lock, key);
+        return 0;
+    }
+
+    void complete_tx(fdcan_device bus)
+    {
+        const int result = atomic_set(&tx_result[bus], 0);
+        inflight_frame &sent = inflight[bus];
+        if (result == 0 || !sent.used) {
+            return;
+        }
+        const k_spinlock_key_t key = k_spin_lock(&tx_lock);
+        if (sent.admin) {
+            if (one_shots[bus].count != 0U) {
+                one_shot_queue &queue = one_shots[bus];
+                queue.head = static_cast<uint8_t>((queue.head + 1U) % one_shot_depth);
+                --queue.count;
+            }
+        } else {
+            periodic_entry &entry = periodic[sent.slot];
+            if (entry.generation == sent.generation) {
+                entry.pending = false;
+                entry.eligible = false;
             }
         }
         k_spin_unlock(&tx_lock, key);
+        sent.used = false;
+    }
+
+    void discard_selected(fdcan_device bus, bool admin, size_t slot, uint32_t generation)
+    {
+        const k_spinlock_key_t key = k_spin_lock(&tx_lock);
+        if (admin) {
+            one_shot_queue &queue = one_shots[bus];
+            if (queue.count != 0U) {
+                queue.head = static_cast<uint8_t>((queue.head + 1U) % one_shot_depth);
+                --queue.count;
+            }
+        } else if (periodic[slot].generation == generation) {
+            periodic[slot].pending = false;
+            periodic[slot].eligible = false;
+        }
+        k_spin_unlock(&tx_lock, key);
+    }
+
+    void send_next(fdcan_device bus)
+    {
+        if (inflight[bus].used || submit_failure_active[bus]) {
+            return;
+        }
+        fdcan_frame frame{};
+        bool admin = false;
+        size_t slot = max_periodic_frames;
+        uint32_t generation = 0U;
+        const k_spinlock_key_t key = k_spin_lock(&tx_lock);
+        if (one_shots[bus].count != 0U) {
+            frame = one_shots[bus].frames[one_shots[bus].head];
+            admin = true;
+        }
+        k_spin_unlock(&tx_lock, key);
+        if (!admin) {
+            size_t offset = 0U;
+            while (offset < max_periodic_frames) {
+                const k_spinlock_key_t scan_key = k_spin_lock(&tx_lock);
+                for (; offset < max_periodic_frames; ++offset) {
+                    const size_t index = (next_periodic[bus] + offset) % max_periodic_frames;
+                    const periodic_entry &entry = periodic[index];
+                    if (entry.used && entry.pending && entry.eligible && entry.bus == bus) {
+                        frame = entry.frame;
+                        generation = entry.generation;
+                        slot = index;
+                        ++offset;
+                        break;
+                    }
+                }
+                k_spin_unlock(&tx_lock, scan_key);
+                if (slot == max_periodic_frames || !cube_control_blocked({bus, frame})) {
+                    break;
+                }
+                slot = max_periodic_frames;
+            }
+            if (slot == max_periodic_frames) {
+                const k_spinlock_key_t idle_key = k_spin_lock(&tx_lock);
+                bool ready = one_shots[bus].count != 0U;
+                for (const periodic_entry &entry : periodic) {
+                    ready |= entry.used && entry.pending && entry.eligible && entry.bus == bus;
+                }
+                if (!ready) {
+                    atomic_and(&ready_bus_mask, ~BIT(bus));
+                }
+                k_spin_unlock(&tx_lock, idle_key);
+                return;
+            }
+        }
+
+        if (bsp_fdcan_tx_pending(bus) != 0U) {
+            discard_selected(bus, admin, slot, generation);
+            submit_failure_active[bus] = true;
+            submit_failure_since_ms[bus] = k_uptime_get_32();
+            return;
+        }
+        const int ret = bsp_fdcan_transmit(bus, &frame, FDCAN_NO_WAIT);
+        if (ret != 0) {
+            atomic_inc(&tx_errors);
+            discard_selected(bus, admin, slot, generation);
+            submit_failure_active[bus] = true;
+            submit_failure_since_ms[bus] = k_uptime_get_32();
+            return;
+        }
+        inflight[bus] = {true, admin, frame, slot, generation, k_uptime_get_32()};
+        if (!admin) {
+            const k_spinlock_key_t staged_key = k_spin_lock(&tx_lock);
+            if (periodic[slot].generation == generation) {
+                periodic[slot].eligible = false;
+            }
+            next_periodic[bus] = (slot + 1U) % max_periodic_frames;
+            k_spin_unlock(&tx_lock, staged_key);
+        }
+        if (frame.id_type == FDCAN_ID_STANDARD && frame.id == 0x01U) {
+            mark_cube_request_sent(bus, frame);
+        }
     }
 
     void recover_stuck_tx()
     {
+        const uint32_t now_ms = k_uptime_get_32();
         for (uint8_t index = 0U; index < FDCAN_DEVICE_COUNT; ++index) {
-            if (!bus_registered[index]) {
+            if (!bus_registered[index] ||
+                (!inflight[index].used && !submit_failure_active[index])) {
                 continue;
             }
             const fdcan_device bus = static_cast<fdcan_device>(index);
-            fdcan_bus_state state{};
-            const int state_result = bsp_fdcan_get_state(bus, &state, nullptr);
-            if (state_result == 0 && (state == FDCAN_BUS_OFF || state == FDCAN_BUS_STOPPED)) {
-                if (++tx_pending_ticks[index] < tx_timeout_ticks) {
-                    continue;
-                }
-                tx_pending_ticks[index] = 0U;
-                if (bsp_fdcan_recover(bus, FDCAN_NO_WAIT) != 0) {
-                    atomic_inc(&tx_errors);
-                }
+            const bool timed_out = inflight[index].used &&
+                now_ms - inflight[index].started_ms >= tx_timeout_ms;
+            const bool submit_stalled = submit_failure_active[index] &&
+                now_ms - submit_failure_since_ms[index] >= tx_timeout_ms;
+            if (!timed_out && !submit_stalled) {
                 continue;
             }
-            if (bsp_fdcan_tx_pending(bus) == 0U) {
-                tx_pending_ticks[index] = 0U;
-                continue;
-            }
-            if (++tx_pending_ticks[index] < tx_timeout_ticks) {
-                continue;
-            }
-
-            tx_pending_ticks[index] = 0U;
             if (bsp_fdcan_recover(bus, FDCAN_NO_WAIT) != 0) {
                 atomic_inc(&tx_errors);
+            } else {
+                submit_failure_active[index] = false;
+                if (inflight[index].used && atomic_cas(&tx_result[index], 0, 2)) {
+                    k_sem_give(&port_sem);
+                }
             }
         }
     }
 
     void send_ready()
     {
+        const atomic_val_t ready = atomic_get(&ready_bus_mask);
         for (uint8_t index = 0U; index < FDCAN_DEVICE_COUNT; ++index) {
             const fdcan_device bus = static_cast<fdcan_device>(index);
-            if (!bus_registered[index]) {
+            if (!bus_registered[index] || (ready & BIT(index)) == 0) {
                 continue;
             }
-            if (bsp_fdcan_tx_pending(bus) != 0U) {
-                continue;
-            }
-            if (!send_one_shot(bus)) {
-                send_periodic(bus);
-            }
+            send_next(bus);
         }
     }
 
@@ -402,17 +647,22 @@ namespace
     {
         while (1) {
             k_sem_take(&port_sem, K_FOREVER);
-            if (atomic_set(&tick_due, 0) != 0) {
-                release_periodic();
+            for (uint8_t index = 0U; index < FDCAN_DEVICE_COUNT; ++index) {
+                complete_tx(static_cast<fdcan_device>(index));
+            }
+            const bool tick = atomic_set(&tick_due, 0) != 0;
+            if (tick) {
                 recover_stuck_tx();
             }
-            drain_control();
-            send_ready();
-            drain_rx();
+            const bool tx = atomic_set(&tx_due, 0) != 0;
+            if (tick || tx) {
+                send_ready();
+            }
         }
     }
 
-    int bind_motor(motor_kind kind, void *motor, fdcan_device bus, uint32_t feedback_id, fdcan_protocol protocol, uint8_t motor_id)
+    int bind_motor(motor_kind kind, void *motor, fdcan_device bus, uint32_t feedback_id,
+                   fdcan_protocol protocol, uint8_t motor_id, bool automatic_recovery = true)
     {
         if (motor == nullptr || !valid_bus(bus) || feedback_id > 0x7FFU) {
             return -EINVAL;
@@ -458,6 +708,17 @@ namespace
         free_entry->protocol = protocol;
         free_entry->motor_id = motor_id;
         atomic_set(&free_entry->received_count, 0);
+        free_entry->request_count = 0U;
+        free_entry->response_count = 0U;
+        free_entry->pending_since_ms = 0U;
+        free_entry->offline = kind == motor_kind::cubemars;
+        free_entry->enable_pending = false;
+        free_entry->enable_acknowledged = false;
+        free_entry->automatic_recovery = automatic_recovery;
+        const size_t slot = static_cast<size_t>(free_entry - motors);
+        next_rx_route[slot] = rx_routes[bus][feedback_id];
+        rx_routes[bus][feedback_id] = static_cast<uint8_t>(slot + 1U);
+        ++motor_count;
         k_spin_unlock(&motor_lock, key);
         return 0;
     }
@@ -479,14 +740,16 @@ namespace
 
 int fdcan_port_init()
 {
+    if (atomic_get(&initialized) != 0) {
+        return 0;
+    }
     k_mutex_lock(&init_lock, K_FOREVER);
-    if (initialized) {
+    if (atomic_get(&initialized) != 0) {
         k_mutex_unlock(&init_lock);
         return 0;
     }
 
     fdcan_topic_init();
-    k_msgq_init(&rx_queue, rx_storage, sizeof(rx_item), rx_depth);
 
     for (uint8_t index = 0U; index < FDCAN_DEVICE_COUNT; ++index) {
         const fdcan_device bus = static_cast<fdcan_device>(index);
@@ -515,12 +778,77 @@ int fdcan_port_init()
     }
 
     k_timer_init(&port_timer, timer_callback, nullptr);
-    k_thread_create(&port_thread, port_stack, K_THREAD_STACK_SIZEOF(port_stack),
-                    thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
-    fdcan_topic_set_control_notify(control_notify);
+    k_thread_create(&port_thread, port_stack, K_THREAD_STACK_SIZEOF(port_stack), thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
+    fdcan_topic_set_control_sink(topic_control_sink);
+    fdcan_topic_set_feedback_refresh(refresh_feedback);
+    fdcan_topic_set_feedback_refresh_batch(refresh_feedback_batch);
+    // Sample all latest-value control slots together at the control-loop cadence.
     k_timer_start(&port_timer, K_MSEC(1), K_MSEC(1));
-    initialized = true;
+    atomic_set(&initialized, 1);
     k_mutex_unlock(&init_lock);
+    return 0;
+}
+
+int fdcan_port_subscribe_raw(fdcan_device bus, uint32_t id)
+{
+    if (!valid_bus(bus) || id >= standard_id_count) {
+        return -EINVAL;
+    }
+    const int ret = fdcan_port_init();
+    if (ret != 0) {
+        return ret;
+    }
+    if (!bus_registered[bus]) {
+        return -ENODEV;
+    }
+    const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+    for (size_t index = 0U; index < raw_subscription_count; ++index) {
+        if (raw_subscriptions[index].bus == bus && raw_subscriptions[index].id == id) {
+            k_spin_unlock(&motor_lock, key);
+            return -EALREADY;
+        }
+    }
+    if (raw_subscription_count == max_raw_subscriptions) {
+        k_spin_unlock(&motor_lock, key);
+        return -ENOSPC;
+    }
+    const size_t slot = max_motors + raw_subscription_count;
+    raw_subscriptions[raw_subscription_count++] = {bus, id};
+    next_rx_route[slot] = rx_routes[bus][id];
+    rx_routes[bus][id] = static_cast<uint8_t>(slot + 1U);
+    k_spin_unlock(&motor_lock, key);
+    return 0;
+}
+
+int fdcan_port_latest_raw(fdcan_device bus, uint32_t id, FdcanRawSnapshot &snapshot)
+{
+    if (!valid_bus(bus) || id >= standard_id_count) {
+        return -EINVAL;
+    }
+    size_t slot = max_rx_slots;
+    const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+    for (size_t index = 0U; index < raw_subscription_count; ++index) {
+        if (raw_subscriptions[index].bus == bus && raw_subscriptions[index].id == id) {
+            slot = max_motors + index;
+            break;
+        }
+    }
+    k_spin_unlock(&motor_lock, key);
+    if (slot == max_rx_slots) {
+        return -ENOENT;
+    }
+    const k_spinlock_key_t rx_key = k_spin_lock(&rx_lock);
+    const raw_feedback value = raw_feedbacks[slot];
+    if (value.generation != 0U) {
+        processed_generation[slot] = value.generation;
+    }
+    k_spin_unlock(&rx_lock, rx_key);
+    if (value.generation == 0U) {
+        return -ENODATA;
+    }
+    memcpy(snapshot.data, value.data, sizeof(snapshot.data));
+    snapshot.length = value.length;
+    snapshot.timestamp_ms = value.timestamp_ms;
     return 0;
 }
 
@@ -534,9 +862,9 @@ int fdcan_port_bind(c620 &motor)
     return bind_motor(motor_kind::c620, &motor, motor.device(), motor.feedback_id(), FDCAN_PROTOCOL_CLASSIC, motor.motor_id());
 }
 
-int fdcan_port_bind(dm_motor &motor)
+int fdcan_port_bind(dm_motor &motor, bool automatic_recovery)
 {
-    return bind_motor(motor_kind::dm, &motor, motor.device(), motor.feedback_id(), motor.feedback_protocol(), motor.motor_id());
+    return bind_motor(motor_kind::dm, &motor, motor.device(), motor.feedback_id(), motor.feedback_protocol(), motor.motor_id(), automatic_recovery);
 }
 
 int fdcan_port_bind(cubemars &motor)
@@ -544,47 +872,181 @@ int fdcan_port_bind(cubemars &motor)
     return bind_motor(motor_kind::cubemars, &motor, motor.device(), motor.feedback_id(), FDCAN_PROTOCOL_CLASSIC, 0U);
 }
 
+int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data)
+{
+    if (index >= max_motors) {
+        return -EINVAL;
+    }
+    const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+    motor_entry entry = motors[index];
+    k_spin_unlock(&motor_lock, key);
+    if (!entry.used) {
+        return -ENOENT;
+    }
+
+    refresh_feedback(entry.bus, entry.feedback_id, static_cast<FdcanMotorKind>(entry.kind));
+    const k_spinlock_key_t updated_key = k_spin_lock(&motor_lock);
+    entry = motors[index];
+    k_spin_unlock(&motor_lock, updated_key);
+
+    data.bus = entry.bus;
+    data.feedback_id = entry.feedback_id;
+    switch (entry.kind) {
+        case motor_kind::c610: {
+            const auto &motor = *static_cast<c610 *>(entry.motor);
+            data.kind = FdcanMotorKind::c610;
+            data.valid_feedback_count = motor.get_feedback_count();
+            data.control_frame_id = motor.command_frame_id();
+            data.status = 0U;
+            break;
+        }
+        case motor_kind::c620: {
+            const auto &motor = *static_cast<c620 *>(entry.motor);
+            data.kind = FdcanMotorKind::c620;
+            data.valid_feedback_count = motor.get_feedback_count();
+            data.control_frame_id = motor.command_frame_id();
+            data.status = 0U;
+            break;
+        }
+        case motor_kind::dm: {
+            const auto &motor = *static_cast<dm_motor *>(entry.motor);
+            data.kind = FdcanMotorKind::dm;
+            data.valid_feedback_count = motor.get_feedback_count();
+            data.control_frame_id = motor.control_frame_id();
+            data.status = motor.get_data().status;
+            break;
+        }
+        case motor_kind::cubemars: {
+            const auto &motor = *static_cast<cubemars *>(entry.motor);
+            data.kind = FdcanMotorKind::cubemars;
+            data.valid_feedback_count = motor.get_feedback_count();
+            data.control_frame_id = motor.control_frame_id();
+            data.status = 0U;
+            break;
+        }
+    }
+    data.request_count = entry.request_count;
+    data.response_count = entry.response_count;
+    data.pending_since_ms = entry.pending_since_ms;
+    data.enable_acknowledged = entry.enable_acknowledged;
+    data.automatic_recovery = entry.automatic_recovery;
+    return 0;
+}
+
+size_t fdcan_port_motor_count()
+{
+    const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+    const size_t count = motor_count;
+    k_spin_unlock(&motor_lock, key);
+    return count;
+}
+
+void fdcan_port_set_motor_offline(size_t index, bool offline)
+{
+    if (index >= max_motors) {
+        return;
+    }
+    const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+    if (!motors[index].used) {
+        k_spin_unlock(&motor_lock, key);
+        return;
+    }
+    const motor_kind kind = motors[index].kind;
+    const fdcan_device bus = motors[index].bus;
+    const uint32_t control_id = kind == motor_kind::cubemars ? static_cast<cubemars *>(motors[index].motor)->control_frame_id() : 0U;
+    const bool was_offline = motors[index].offline;
+    motors[index].offline = offline;
+    if (kind == motor_kind::cubemars && offline && !was_offline) {
+        motors[index].enable_pending = false;
+        motors[index].enable_acknowledged = false;
+    }
+    k_spin_unlock(&motor_lock, key);
+
+    if (kind == motor_kind::cubemars) {
+        const k_spinlock_key_t tx_key = k_spin_lock(&tx_lock);
+        for (periodic_entry &entry : periodic) {
+            if (entry.used && entry.bus == bus && entry.frame.id_type == FDCAN_ID_STANDARD && entry.frame.id == control_id) {
+                entry.pending = false;
+                entry.eligible = false;
+            }
+        }
+        k_spin_unlock(&tx_lock, tx_key);
+    }
+}
+
+int fdcan_port_build_offline_frame(size_t index, fdcan_frame &frame)
+{
+    return fdcan_port_build_recovery_frame(index, false, frame);
+}
+
+int fdcan_port_build_recovery_frame(size_t index, bool clear_error, fdcan_frame &frame)
+{
+    if (index >= max_motors) {
+        return -EINVAL;
+    }
+    const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+    const motor_entry entry = motors[index];
+    k_spin_unlock(&motor_lock, key);
+    if (!entry.used) {
+        return -ENOENT;
+    }
+    switch (entry.kind) {
+        case motor_kind::c610:
+        case motor_kind::c620:
+            return -ENOTSUP;
+        case motor_kind::dm:
+            return clear_error ? static_cast<dm_motor *>(entry.motor)->build_clear_error_frame(frame) : static_cast<dm_motor *>(entry.motor)->build_enable_frame(frame);
+        case motor_kind::cubemars:
+            return static_cast<cubemars *>(entry.motor)->build_enable_frame(frame);
+    }
+    return -EINVAL;
+}
+
+int fdcan_port_build_control_frame(size_t index, fdcan_frame &frame)
+{
+    if (index >= max_motors) {
+        return -EINVAL;
+    }
+    const k_spinlock_key_t key = k_spin_lock(&motor_lock);
+    const motor_entry entry = motors[index];
+    k_spin_unlock(&motor_lock, key);
+    if (!entry.used) {
+        return -ENOENT;
+    }
+    switch (entry.kind) {
+        case motor_kind::c610:
+            return static_cast<c610 *>(entry.motor)->build_control_frame(frame);
+        case motor_kind::c620:
+            return static_cast<c620 *>(entry.motor)->build_control_frame(frame);
+        case motor_kind::dm:
+            return static_cast<dm_motor *>(entry.motor)->build_control_frame(frame);
+        case motor_kind::cubemars:
+            return static_cast<cubemars *>(entry.motor)->build_control_frame(frame);
+    }
+    return -EINVAL;
+}
+
 int fdcan_port_submit(fdcan_device bus, const fdcan_frame &frame)
 {
     if (!valid_bus(bus) || !valid_frame(frame)) {
+        atomic_inc(&control_send_dropped);
         return -EINVAL;
     }
     const int ret = fdcan_port_init();
     if (ret != 0) {
+        atomic_inc(&control_send_dropped);
         return ret;
     }
     if (!bus_registered[bus]) {
+        atomic_inc(&control_send_dropped);
         return -ENODEV;
     }
 
-    const k_spinlock_key_t key = k_spin_lock(&tx_lock);
-    periodic_entry *slot = nullptr;
-    periodic_entry *free_slot = nullptr;
-    for (periodic_entry &entry : periodic) {
-        if (!entry.used) {
-            if (free_slot == nullptr) {
-                free_slot = &entry;
-            }
-            continue;
-        }
-        if (entry.bus == bus && entry.frame.id == frame.id && entry.frame.id_type == frame.id_type && entry.frame.protocol == frame.protocol) {
-            slot = &entry;
-            break;
-        }
+    const int stage_result = stage_control({bus, frame});
+    if (stage_result != 0) {
+        atomic_inc(&control_send_dropped);
+        return stage_result;
     }
-    if (slot == nullptr) {
-        slot = free_slot;
-    }
-    if (slot == nullptr) {
-        k_spin_unlock(&tx_lock, key);
-        return -ENOSPC;
-    }
-    slot->used = true;
-    slot->pending = true;
-    slot->bus = bus;
-    slot->frame = frame;
-    ++slot->generation;
-    k_spin_unlock(&tx_lock, key);
     return 0;
 }
 
@@ -592,28 +1054,44 @@ int fdcan_port_submit(const c610 &motor)
 {
     fdcan_frame frame{};
     const int ret = motor.build_control_frame(frame);
-    return ret == 0 ? fdcan_port_submit(motor.device(), frame) : ret;
+    if (ret != 0) {
+        atomic_inc(&control_send_dropped);
+        return ret;
+    }
+    return fdcan_port_submit(motor.device(), frame);
 }
 
 int fdcan_port_submit(const c620 &motor)
 {
     fdcan_frame frame{};
     const int ret = motor.build_control_frame(frame);
-    return ret == 0 ? fdcan_port_submit(motor.device(), frame) : ret;
+    if (ret != 0) {
+        atomic_inc(&control_send_dropped);
+        return ret;
+    }
+    return fdcan_port_submit(motor.device(), frame);
 }
 
 int fdcan_port_submit(const dm_motor &motor)
 {
     fdcan_frame frame{};
     const int ret = motor.build_control_frame(frame);
-    return ret == 0 ? fdcan_port_submit(motor.device(), frame) : ret;
+    if (ret != 0) {
+        atomic_inc(&control_send_dropped);
+        return ret;
+    }
+    return fdcan_port_submit(motor.device(), frame);
 }
 
 int fdcan_port_submit(const cubemars &motor)
 {
     fdcan_frame frame{};
     const int ret = motor.build_control_frame(frame);
-    return ret == 0 ? fdcan_port_submit(motor.device(), frame) : ret;
+    if (ret != 0) {
+        atomic_inc(&control_send_dropped);
+        return ret;
+    }
+    return fdcan_port_submit(motor.device(), frame);
 }
 
 int fdcan_port_send_once(fdcan_device bus, const fdcan_frame &frame)
@@ -631,20 +1109,29 @@ int fdcan_port_send_once(fdcan_device bus, const fdcan_frame &frame)
 
     const k_spinlock_key_t key = k_spin_lock(&tx_lock);
     one_shot_queue &queue = one_shots[bus];
+    for (uint8_t offset = 0U; offset < queue.count; ++offset) {
+        const uint8_t queued_index = static_cast<uint8_t>((queue.head + offset) % one_shot_depth);
+        const fdcan_frame &queued = queue.frames[queued_index];
+        if (queued.id == frame.id && queued.id_type == frame.id_type &&
+            queued.protocol == frame.protocol && queued.length == frame.length &&
+            memcmp(queued.data, frame.data, frame.length) == 0) {
+            k_spin_unlock(&tx_lock, key);
+            return 0;
+        }
+    }
     if (queue.count == one_shot_depth) {
         k_spin_unlock(&tx_lock, key);
         return -ENOBUFS;
     }
-    for (periodic_entry &entry : periodic) {
-        if (entry.used && entry.bus == bus && entry.frame.id == frame.id && entry.frame.id_type == frame.id_type) {
-            entry.pending = false;
-            entry.eligible = false;
-        }
-    }
+    // Recovery/admin frames are one-shot traffic. Keep the latest periodic
+    // control frame staged so it can resume immediately after recovery.
     queue.frames[queue.tail] = frame;
     queue.tail = static_cast<uint8_t>((queue.tail + 1U) % one_shot_depth);
     ++queue.count;
+    atomic_or(&ready_bus_mask, BIT(bus));
     k_spin_unlock(&tx_lock, key);
+    atomic_set(&tx_due, 1);
+    k_sem_give(&port_sem);
     return 0;
 }
 
@@ -690,7 +1177,10 @@ int fdcan_port_request_mode(dm_motor &motor, DmControlMode mode)
     queue.frames[queue.tail] = frame;
     queue.tail = static_cast<uint8_t>((queue.tail + 1U) % one_shot_depth);
     ++queue.count;
+    atomic_or(&ready_bus_mask, BIT(bus));
     k_spin_unlock(&tx_lock, key);
+    atomic_set(&tx_due, 1);
+    k_sem_give(&port_sem);
     return 0;
 }
 

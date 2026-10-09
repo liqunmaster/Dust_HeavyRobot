@@ -1,5 +1,7 @@
 #include "remote_port.hpp"
 
+#include "remote_channel.hpp"
+
 volatile uint32_t remote_port_loop_count;
 volatile uint32_t remote_port_total_cycles;
 volatile uint32_t remote_port_max_cycles;
@@ -24,6 +26,11 @@ namespace
         {DEVICE_DT_GET(DT_ALIAS(vt03_uart)), remote_uart_source::uart1, nullptr},
         {DEVICE_DT_GET(DT_ALIAS(dt7_uart)), remote_uart_source::uart4, nullptr},
     };
+
+    void publish_sample(const input_sample &sample, void *)
+    {
+        remote_channel_publish_sample(sample);
+    }
 
     int init_uart(remote_transport &transport)
     {
@@ -61,7 +68,7 @@ namespace
             chunk.timestamp_ms = k_uptime_get_32();
             chunk.discontinuity = count < 0;
             chunk.length = count > 0 ? static_cast<uint16_t>(count) : 0U;
-            input_process_chunk(chunk);
+            input_process_chunk(chunk, publish_sample, nullptr);
             if (count < 0) {
                 break;
             }
@@ -76,7 +83,7 @@ namespace
 
     void thread_entry(void *, void *, void *)
     {
-        while (true) {
+        while (1) {
             k_sem_take(&remote_sem, K_FOREVER);
             const uint32_t start = k_cycle_get_32();
             for (auto &transport : transports) {
@@ -93,24 +100,22 @@ namespace
     }
 }
 
-int remote_port_init()
+void remote_port_init()
 {
     if (started) {
-        return 0;
+        return;
     }
     for (auto &transport : transports) {
         const int result = init_uart(transport);
         if (result != 0) {
-            return result;
+            return;
         }
     }
     k_timer_init(&remote_timer, timer_callback, nullptr);
-    k_thread_create(&remote_thread, remote_stack, K_THREAD_STACK_SIZEOF(remote_stack),
-                    thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
+    k_thread_create(&remote_thread, remote_stack, K_THREAD_STACK_SIZEOF(remote_stack), thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
     k_thread_name_set(&remote_thread, "remote_rx");
     started = true;
-    k_timer_start(&remote_timer, K_MSEC(1), K_MSEC(1));
-    return 0;
+    k_timer_start(&remote_timer, K_MSEC(5), K_MSEC(5));
 }
 
 uint32_t remote_port_feedback_count()

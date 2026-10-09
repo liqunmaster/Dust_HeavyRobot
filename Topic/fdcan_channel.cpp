@@ -2,63 +2,120 @@
 
 namespace
 {
-    alignas(4) char feedback_storage[sizeof(FdcanFeedbackTopicData) * 32U];
-
-    alignas(4) char control_storage[sizeof(FdcanControlTopicData) * 8U];
-
-    struct k_msgq feedback_queue{};
-
-    struct k_msgq control_queue{};
-
-    fdcan_topic_notify_t control_notify = nullptr;
+    fdcan_control_sink_t control_sink = nullptr;
+    fdcan_feedback_refresh_t feedback_refresh = nullptr;
+    fdcan_feedback_refresh_batch_t feedback_refresh_batch = nullptr;
 
     atomic_t feedback_dropped{};
 
     atomic_t control_dropped{};
 
+    struct latest_entry
+    {
+        bool used;
+        FdcanFeedbackTopicData feedback;
+    };
+
+    latest_entry latest[32]{};
+    struct k_spinlock latest_lock;
+
 }
 
 void fdcan_topic_init()
 {
-    k_msgq_init(&feedback_queue, feedback_storage, sizeof(FdcanFeedbackTopicData), 32U);
-    k_msgq_init(&control_queue, control_storage, sizeof(FdcanControlTopicData), 8U);
+    control_sink = nullptr;
 }
 
-int fdcan_topic_publish_feedback(const FdcanFeedbackTopicData &data)
+void fdcan_topic_publish_feedback(const FdcanFeedbackTopicData &data)
 {
-    const int ret = k_msgq_put(&feedback_queue, &data, K_NO_WAIT);
-    if (ret != 0) {
+    const k_spinlock_key_t key = k_spin_lock(&latest_lock);
+    latest_entry *slot = nullptr;
+    for (latest_entry &entry : latest) {
+        if (entry.used && entry.feedback.bus == data.bus && entry.feedback.id == data.id &&
+            entry.feedback.kind == data.kind) {
+            slot = &entry;
+            break;
+        }
+        if (!entry.used && slot == nullptr) {
+            slot = &entry;
+        }
+    }
+    if (slot != nullptr) {
+        slot->used = true;
+        slot->feedback = data;
+    } else {
         atomic_inc(&feedback_dropped);
     }
-    return ret;
+    k_spin_unlock(&latest_lock, key);
 }
 
-int fdcan_topic_receive_feedback(FdcanFeedbackTopicData &data)
+int fdcan_topic_latest_feedback(fdcan_device bus, uint32_t id, FdcanMotorKind kind, FdcanFeedbackTopicData &data)
 {
-    return k_msgq_get(&feedback_queue, &data, K_NO_WAIT);
+    if (feedback_refresh != nullptr) {
+        feedback_refresh(bus, id, kind);
+    }
+    const k_spinlock_key_t key = k_spin_lock(&latest_lock);
+    for (const latest_entry &entry : latest) {
+        if (entry.used && entry.feedback.bus == bus && entry.feedback.id == id &&
+            entry.feedback.kind == kind) {
+            data = entry.feedback;
+            k_spin_unlock(&latest_lock, key);
+            return 0;
+        }
+    }
+    k_spin_unlock(&latest_lock, key);
+    return -ENODATA;
+}
+
+void fdcan_topic_latest_feedback_batch(const FdcanFeedbackKey *keys, size_t count, FdcanFeedbackTopicData *data, bool *found)
+{
+    if (keys == nullptr || data == nullptr || found == nullptr) {
+        return;
+    }
+    if (feedback_refresh_batch != nullptr) {
+        feedback_refresh_batch(keys, count);
+    } else if (feedback_refresh != nullptr) {
+        for (size_t index = 0; index < count; ++index) {
+            feedback_refresh(keys[index].bus, keys[index].id, keys[index].kind);
+        }
+    }
+    const k_spinlock_key_t key = k_spin_lock(&latest_lock);
+    for (size_t index = 0; index < count; ++index) {
+        found[index] = false;
+        for (const latest_entry &entry : latest) {
+            if (entry.used && entry.feedback.bus == keys[index].bus &&
+                entry.feedback.id == keys[index].id && entry.feedback.kind == keys[index].kind) {
+                data[index] = entry.feedback;
+                found[index] = true;
+                break;
+            }
+        }
+    }
+    k_spin_unlock(&latest_lock, key);
 }
 
 int fdcan_topic_publish_control(const FdcanControlTopicData &data)
 {
-    const int ret = k_msgq_put(&control_queue, &data, K_NO_WAIT);
-    if (ret != 0) {
+    const int result = control_sink != nullptr ? control_sink(data) : -ENODEV;
+    if (result != 0) {
         atomic_inc(&control_dropped);
-        return ret;
     }
-    if (control_notify != nullptr) {
-        control_notify();
-    }
-    return 0;
+    return result;
 }
 
-int fdcan_topic_receive_control(FdcanControlTopicData &data)
+void fdcan_topic_set_control_sink(fdcan_control_sink_t sink)
 {
-    return k_msgq_get(&control_queue, &data, K_NO_WAIT);
+    control_sink = sink;
 }
 
-void fdcan_topic_set_control_notify(fdcan_topic_notify_t notify)
+void fdcan_topic_set_feedback_refresh(fdcan_feedback_refresh_t refresh)
 {
-    control_notify = notify;
+    feedback_refresh = refresh;
+}
+
+void fdcan_topic_set_feedback_refresh_batch(fdcan_feedback_refresh_batch_t refresh)
+{
+    feedback_refresh_batch = refresh;
 }
 
 uint32_t fdcan_topic_feedback_dropped_count()

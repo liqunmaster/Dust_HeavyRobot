@@ -11,7 +11,7 @@
 
 using imu_sample = icm42688phxy_sample;
 
-int imu_port_init();
+void imu_port_init();
 
 int imu_port_get_sample(imu_sample &sample);
 

@@ -26,32 +26,29 @@ namespace
 
     void usb_thread_entry(void *, void *, void *)
     {
-        while (true) {
-            (void)bsp_usb_wait_event(K_MSEC(10));
+        while (1) {
+            bsp_usb_wait_event(K_MSEC(10));
             bsp_usb_task();
             usb_port_process();
         }
     }
 }
-int usb_port_init()
+void usb_port_init()
 {
     if (k_is_in_isr()) {
-        return -EWOULDBLOCK;
+        return;
     }
     if (ready) {
-        return 0;
+        return;
     }
     const int ret = bsp_usb_init();
     if (ret != 0) {
-        return ret;
+        return;
     }
 
     ring_buf_init(&rx_ring, sizeof(rx_storage), rx_storage);
     ready = true;
-    k_thread_create(&usb_thread, usb_stack, K_THREAD_STACK_SIZEOF(usb_stack),
-                    usb_thread_entry, nullptr, nullptr, nullptr,
-                    K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
-    return 0;
+    k_thread_create(&usb_thread, usb_stack, K_THREAD_STACK_SIZEOF(usb_stack), usb_thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
 }
 
 int usb_port_receive(void *data, size_t length)

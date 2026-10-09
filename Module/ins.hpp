@@ -18,12 +18,12 @@ struct ins_euler_angles
     float yaw_unwrapped_rad;
 };
 
-int ins_init();
+void ins_init();
 
 bool ins_process(int16_t ax_raw, int16_t ay_raw, int16_t az_raw, int16_t gx_raw, int16_t gy_raw, int16_t gz_raw, float dt_seconds);
 
-int ins_set_axis_rotation(const float rotation[3][3]);
+void ins_set_axis_rotation(const float rotation[3][3]);
 
-int ins_reset_axis_rotation();
+void ins_reset_axis_rotation();
 
 bool ins_get_euler_angles(ins_euler_angles &angles);

@@ -1,0 +1,12 @@
+diff --git a/drivers/spi/spi_hpmicro.c b/drivers/spi/spi_hpmicro.c
+--- a/drivers/spi/spi_hpmicro.c
++++ b/drivers/spi/spi_hpmicro.c
+@@ -764,7 +764,7 @@ static int spi_hpm_transceive(const struct device *dev,
+ 	    tx_bufs->buffers[0].buf != NULL && rx_bufs->buffers[0].buf != NULL &&
+ 	    tx_bufs->buffers[0].len != 0U &&
+ 	    tx_bufs->buffers[0].len == rx_bufs->buffers[0].len &&
+-	    tx_bufs->buffers[0].len <= 16U &&
++	    tx_bufs->buffers[0].len <= 32U &&
+ 	    spi_cfg->frequency != 0U &&
+ 	    SPI_WORD_SIZE_GET(spi_cfg->operation) == 8U) {
+ 		return transceive_pio(dev, spi_cfg, tx_bufs, rx_bufs);

@@ -1,0 +1,34 @@
+diff --git a/drivers/can/mcan_hpmicro.c b/drivers/can/mcan_hpmicro.c
+--- a/drivers/can/mcan_hpmicro.c
++++ b/drivers/can/mcan_hpmicro.c
+@@ -273,13 +273,21 @@ __attribute__((section(".isr")))static void hpm_mcan_isr(const struct device *dev)
+ {
+     const struct hpm_mcan_config *cfg = dev->config;
+     MCAN_Type *can = cfg->base;
+     uint32_t flags = mcan_get_interrupt_flags(can);
++    /* A callback may queue the next frame; do not clear its completion later. */
++    mcan_clear_interrupt_flags(can, flags);
+     /* New message is available in RXFIFO0 */
+     if ((flags & MCAN_INT_RXFIFO0_NEW_MSG) != 0) {
+-        hpm_mcan_get_message_from_rxfifo(dev, 0);
++        uint32_t pending = mcan_get_rxfifo_fill_level(can, 0);
++        while (pending-- > 0U) {
++            hpm_mcan_get_message_from_rxfifo(dev, 0);
++        }
+     }
+     /* New message is available in RXFIFO1 */
+     if ((flags & MCAN_INT_RXFIFO1_NEW_MSG) != 0U) {
+-        hpm_mcan_get_message_from_rxfifo(dev, 1);
++        uint32_t pending = mcan_get_rxfifo_fill_level(can, 1);
++        while (pending-- > 0U) {
++            hpm_mcan_get_message_from_rxfifo(dev, 1);
++        }
+     }
+     /* New message is available in RXBUF */
+@@ -311,6 +319,5 @@ __attribute__((section(".isr")))static void hpm_mcan_isr(const struct device *dev)
+     if ((flags & MCAN_EVENT_ERROR) != 0) {
+         hpm_mcan_state_change_handler(dev);
+     }
+
+-    mcan_clear_interrupt_flags(can, flags);
+ }

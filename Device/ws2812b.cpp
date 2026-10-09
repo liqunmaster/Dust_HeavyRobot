@@ -16,11 +16,11 @@ int ws2812b_init()
     return bsp_pwm_init(bit_period_ns);
 }
 
-int ws2812b_set_color(ws2812b_color color)
+void ws2812b_set_color(ws2812b_color color)
 {
     const int ret = ws2812b_init();
     if (ret != 0) {
-        return ret;
+        return;
     }
 
     const uint8_t grb[3] = {color.green, color.red, color.blue};
@@ -31,10 +31,10 @@ int ws2812b_set_color(ws2812b_color color)
         }
     }
 
-    return bsp_pwm_write(high_ns, bits_per_led);
+    bsp_pwm_write(high_ns, bits_per_led);
 }
 
-int ws2812b_off()
+void ws2812b_off()
 {
-    return ws2812b_set_color({0U, 0U, 0U});
+    ws2812b_set_color({0U, 0U, 0U});
 }

@@ -25,4 +25,4 @@
 
 int bsp_pwm_init(uint32_t period_ns);
 
-int bsp_pwm_write(const uint16_t *high_ns, size_t count);
+void bsp_pwm_write(const uint16_t *high_ns, size_t count);

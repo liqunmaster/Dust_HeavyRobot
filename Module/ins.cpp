@@ -2,9 +2,9 @@
 
 namespace
 {
-    constexpr float accel_lsb_per_g = 2048.0F;
+    constexpr float accel_lsb_per_g = 2048.0f;
 
-    constexpr float gyro_lsb_per_dps = 16.4F;
+    constexpr float gyro_lsb_per_dps = 16.4f;
 
     alg::attitude::QuaternionEkf estimator{};
     alg::attitude::QuaternionEkf::State estimator_state{};
@@ -67,7 +67,7 @@ namespace
     }
 }
 
-int ins_init()
+void ins_init()
 {
     alg::attitude::QuaternionEkf::Config config{};
     config.qq = 0.1F;
@@ -85,7 +85,7 @@ int ins_init()
     startup_gyro_bias[1] = 0.0F;
     startup_gyro_bias[2] = 0.0F;
     startup_bias_samples = 0U;
-    return ins_reset_axis_rotation();
+    ins_reset_axis_rotation();
 }
 
 bool ins_process(int16_t ax_raw, int16_t ay_raw, int16_t az_raw, int16_t gx_raw, int16_t gy_raw, int16_t gz_raw, float dt_seconds)
@@ -149,15 +149,15 @@ bool ins_process(int16_t ax_raw, int16_t ay_raw, int16_t az_raw, int16_t gx_raw,
     return updated_state.init;
 }
 
-int ins_set_axis_rotation(const float rotation[3][3])
+void ins_set_axis_rotation(const float rotation[3][3])
 {
     if (rotation == nullptr || !finite_matrix(rotation)) {
-        return -EINVAL;
+        return;
     }
 
     const float det = determinant(rotation);
     if (!std::isfinite(det) || std::fabs(det) < 0.5F || std::fabs(det) > 1.5F || !is_rotation_matrix(rotation)) {
-        return -EINVAL;
+        return;
     }
 
     const k_spinlock_key_t key = k_spin_lock(&ins_lock);
@@ -174,17 +174,16 @@ int ins_set_axis_rotation(const float rotation[3][3])
         }
     }
     k_spin_unlock(&ins_lock, key);
-    return 0;
 }
 
-int ins_reset_axis_rotation()
+void ins_reset_axis_rotation()
 {
     constexpr float identity[3][3] = {
         {1.0F, 0.0F, 0.0F},
         {0.0F, 1.0F, 0.0F},
         {0.0F, 0.0F, 1.0F},
     };
-    return ins_set_axis_rotation(identity);
+    ins_set_axis_rotation(identity);
 }
 
 bool ins_get_euler_angles(ins_euler_angles &angles)

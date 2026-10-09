@@ -9,28 +9,6 @@
                 "build", "-b", "hpm5361icb",
                 "-s", "${workspaceFolder}",
                 "-d", "${workspaceFolder}/build",
-                "-p", "auto"
-            ],
-            "options": {
-                "cwd": "D:/MCU/zephyr/zephyrproject",
-                "env": {
-                    "ZEPHYR_BASE": "D:/MCU/zephyr/zephyrproject/zephyr",
-                    "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
-                    "ZEPHYR_SDK_INSTALL_DIR": "D:/MCU/zephyr/zephyr-sdk",
-                    "HPM_SDK_DIR": "D:/MCU/hpm/hpm_sdk"
-                }
-            },
-            "group": { "kind": "build", "isDefault": true },
-            "problemMatcher": ["$gcc"]
-        },
-        {
-            "label": "Rebuild",
-            "type": "process",
-            "command": "D:/MCU/zephyr/zephyrproject/.venv/Scripts/west.exe",
-            "args": [
-                "build", "-b", "hpm5361icb",
-                "-s", "${workspaceFolder}",
-                "-d", "${workspaceFolder}/build",
                 "-p", "always"
             ],
             "options": {
@@ -54,7 +32,8 @@
                 "-s", "D:/MCU/hpm/tools/openocd/tcl",
                 "-s", "D:/MCU/hpm/hpm_sdk/boards/openocd",
                 "-f", "${workspaceFolder}/Board/hpm5361/hpm5361.cfg",
-                "-c", "adapter speed 500",
+                "-c", "adapter speed 100",
+                "-c", "hpm5361.cpu0 configure -work-area-phys 0x0 -work-area-size 0x20000 -work-area-backup 0",
                 "-c", "program {${workspaceFolder}/build/zephyr/Dust_HeavyRobot.elf} verify reset exit"
             ],
             "options": {

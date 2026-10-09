@@ -1,5 +1,7 @@
 #pragma once
 
+#include <errno.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include <zephyr/kernel.h>
@@ -12,7 +14,10 @@ enum class FdcanMotorKind : uint8_t
     c610,
     c620,
     dm,
+    cubemars,
 };
+
+constexpr size_t FDCAN_CONTROL_SLOT_COUNT = 32U;
 
 struct FdcanFeedbackTopicData
 {
@@ -24,6 +29,14 @@ struct FdcanFeedbackTopicData
     float current_a;
     float torque_nm;
     uint32_t valid_count;
+    uint32_t timestamp_ms;
+};
+
+struct FdcanFeedbackKey
+{
+    fdcan_device bus;
+    uint32_t id;
+    FdcanMotorKind kind;
 };
 
 struct FdcanControlTopicData
@@ -32,19 +45,27 @@ struct FdcanControlTopicData
     fdcan_frame frame;
 };
 
-using fdcan_topic_notify_t = void (*)();
+using fdcan_control_sink_t = int (*)(const FdcanControlTopicData &);
+
+using fdcan_feedback_refresh_t = void (*)(fdcan_device, uint32_t, FdcanMotorKind);
+
+using fdcan_feedback_refresh_batch_t = void (*)(const FdcanFeedbackKey *, size_t);
 
 void fdcan_topic_init();
 
-int fdcan_topic_publish_feedback(const FdcanFeedbackTopicData &data);
+void fdcan_topic_publish_feedback(const FdcanFeedbackTopicData &data);
 
-int fdcan_topic_receive_feedback(FdcanFeedbackTopicData &data);
+int fdcan_topic_latest_feedback(fdcan_device bus, uint32_t id, FdcanMotorKind kind, FdcanFeedbackTopicData &data);
+
+void fdcan_topic_latest_feedback_batch(const FdcanFeedbackKey *keys, size_t count, FdcanFeedbackTopicData *data, bool *found);
 
 int fdcan_topic_publish_control(const FdcanControlTopicData &data);
 
-int fdcan_topic_receive_control(FdcanControlTopicData &data);
+void fdcan_topic_set_control_sink(fdcan_control_sink_t sink);
 
-void fdcan_topic_set_control_notify(fdcan_topic_notify_t notify);
+void fdcan_topic_set_feedback_refresh(fdcan_feedback_refresh_t refresh);
+
+void fdcan_topic_set_feedback_refresh_batch(fdcan_feedback_refresh_batch_t refresh);
 
 uint32_t fdcan_topic_feedback_dropped_count();
 

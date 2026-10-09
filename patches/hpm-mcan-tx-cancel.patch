@@ -1,0 +1,28 @@
+diff --git a/drivers/can/mcan_hpmicro.c b/drivers/can/mcan_hpmicro.c
+--- a/drivers/can/mcan_hpmicro.c
++++ b/drivers/can/mcan_hpmicro.c
+@@ -299,7 +299,12 @@ __attribute__((section(".isr")))static void hpm_mcan_isr(const struct device *dev)
+     /* Transmit completed */
+     if ((flags & MCAN_EVENT_TRANSMIT) != 0U) {
+         hpm_mcan_tc_event_handler(dev, 0, 0);
+     }
++    else if (((flags & MCAN_INT_TX_CANCEL_FINISHED) != 0U ||
++              mcan_is_tx_buf_cancellation_finished(can, 0)) &&
++             !mcan_is_transmit_request_pending(can, 0)) {
++        hpm_mcan_tc_event_handler(dev, 0, -EIO);
++    }
+ 
+     /* Error happened */
+     if ((flags & MCAN_EVENT_ERROR) != 0) {
+@@ -364,8 +369,10 @@ static int hpm_mcan_init(const struct device *dev)
+     clock_set_source_divider(cfg->clock_name, cfg->clock_src, cfg->clock_div);
+ 
+     /* Set Interrupt Enable Mask */
+-    uint32_t interrupt_mask = MCAN_EVENT_RECEIVE | MCAN_EVENT_TRANSMIT | MCAN_EVENT_ERROR;
++    uint32_t interrupt_mask = MCAN_EVENT_RECEIVE | MCAN_EVENT_TRANSMIT |
++                              MCAN_INT_TX_CANCEL_FINISHED | MCAN_EVENT_ERROR;
+     config->interrupt_mask = interrupt_mask;
+     config->txbuf_trans_interrupt_mask = ~0UL;
++    config->txbuf_cancel_finish_interrupt_mask = 1U;
+ 
+     /* Set CAN filter list */

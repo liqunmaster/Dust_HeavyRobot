@@ -18,9 +18,9 @@ bool dm_motor::valid_mode(DmControlMode mode)
     return mode >= DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT && mode <= DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_EMIT;
 }
 
-uint16_t dm_motor::control_id(uint8_t motor_id, DmControlMode mode)
+uint16_t dm_motor::control_id(uint16_t tx_id_base, DmControlMode mode)
 {
-    return static_cast<uint16_t>(motor_id) + ((static_cast<uint16_t>(mode) - 1U) << 8U);
+    return tx_id_base + ((static_cast<uint16_t>(mode) - 1U) << 8U);
 }
 
 uint16_t dm_motor::encode(float value, float minimum, float maximum, uint16_t maximum_raw)
@@ -48,9 +48,11 @@ void dm_motor::write_u16(uint8_t *dst, uint16_t value)
     dst[1] = static_cast<uint8_t>(value >> 8U);
 }
 
-int dm_motor::init(fdcan_device device, uint8_t motor_id, DmControlMode mode, DmMitLimits limits, fdcan_protocol protocol, uint16_t master_id)
+int dm_motor::init(fdcan_device device, uint8_t motor_id, DmControlMode mode, DmMitLimits limits,
+                   fdcan_protocol protocol, uint16_t master_id, uint16_t tx_id_base)
 {
-    if (device < FDCAN_DEVICE_CAN0 || device >= FDCAN_DEVICE_COUNT || motor_id == 0U || motor_id > 15U || master_id > 0x7FFU || (protocol != FDCAN_PROTOCOL_CLASSIC && protocol != FDCAN_PROTOCOL_FD) ||
+    if (device < FDCAN_DEVICE_CAN0 || device >= FDCAN_DEVICE_COUNT || motor_id == 0U || motor_id > 15U || master_id > 0x7FFU ||
+        tx_id_base > 0x4FFU || (protocol != FDCAN_PROTOCOL_CLASSIC && protocol != FDCAN_PROTOCOL_FD) ||
         !valid_mode(mode) || !finite(limits.position) || limits.position <= 0.0F || !finite(limits.velocity) || limits.velocity <= 0.0F || !finite(limits.torque) || limits.torque <= 0.0F) {
         return -EINVAL;
     }
@@ -59,6 +61,7 @@ int dm_motor::init(fdcan_device device, uint8_t motor_id, DmControlMode mode, Dm
     device_ = device;
     motor_id_ = motor_id;
     master_id_ = master_id;
+    tx_id_base_ = tx_id_base == 0U ? motor_id : tx_id_base;
     mode_ = mode;
     protocol_ = protocol;
     requested_mode_ = mode;
@@ -182,7 +185,7 @@ int dm_motor::build_control_frame(fdcan_frame &frame) const
         k_spin_unlock(&lock_, key);
         return result;
     }
-    id = control_id(motor_id_, mode_);
+    id = control_id(tx_id_base_, mode_);
     length = tx_length_;
     memcpy(payload, tx_data_, length);
     k_spin_unlock(&lock_, key);
@@ -196,7 +199,7 @@ int dm_motor::build_command_frame(uint8_t command, fdcan_frame &frame) const
         k_spin_unlock(&lock_, key);
         return -ENODEV;
     }
-    const uint16_t id = control_id(motor_id_, mode_);
+    const uint16_t id = control_id(tx_id_base_, mode_);
     k_spin_unlock(&lock_, key);
     uint8_t payload[8];
     memset(payload, 0xFF, sizeof(payload));
@@ -346,7 +349,7 @@ DmControlMode dm_motor::get_mode() const
 uint32_t dm_motor::control_frame_id() const
 {
     const k_spinlock_key_t key = k_spin_lock(&lock_);
-    const uint32_t id = initialized_ ? control_id(motor_id_, mode_) : 0U;
+    const uint32_t id = initialized_ ? control_id(tx_id_base_, mode_) : 0U;
     k_spin_unlock(&lock_, key);
     return id;
 }

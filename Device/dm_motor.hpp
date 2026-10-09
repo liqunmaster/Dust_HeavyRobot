@@ -49,7 +49,8 @@ struct DmData
 class dm_motor
 {
     public:
-    int init(fdcan_device device, uint8_t motor_id, DmControlMode mode, DmMitLimits limits, fdcan_protocol protocol, uint16_t master_id = 0U);
+    int init(fdcan_device device, uint8_t motor_id, DmControlMode mode, DmMitLimits limits,
+             fdcan_protocol protocol, uint16_t master_id = 0U, uint16_t tx_id_base = 0U);
 
     int set_mit(float position, float velocity, float kp, float kd, float torque);
 
@@ -98,7 +99,7 @@ class dm_motor
 
     static bool valid_mode(DmControlMode mode);
 
-    static uint16_t control_id(uint8_t motor_id, DmControlMode mode);
+    static uint16_t control_id(uint16_t tx_id_base, DmControlMode mode);
 
     static uint16_t encode(float value, float minimum, float maximum, uint16_t maximum_raw);
 
@@ -117,6 +118,8 @@ class dm_motor
     uint8_t motor_id_ = 0U;
 
     uint16_t master_id_ = 0U;
+
+    uint16_t tx_id_base_ = 0U;
 
     DmControlMode mode_ = DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT;
 

@@ -11,7 +11,7 @@
 
 #include "bsp_usb.h"
 
-int usb_port_init();
+void usb_port_init();
 
 int usb_port_receive(void *data, size_t length);
 

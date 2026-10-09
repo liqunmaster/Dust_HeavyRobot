@@ -16,15 +16,66 @@
 class c610;
 class c620;
 
+constexpr size_t FDCAN_PORT_MAX_MOTORS = 32U;
+
+struct FdcanRawSnapshot
+{
+    uint8_t data[8];
+    uint8_t length;
+    uint32_t timestamp_ms;
+};
+
+struct FdcanMotorHealthData
+{
+    FdcanMotorKind kind;
+
+    fdcan_device bus;
+
+    uint32_t feedback_id;
+
+    uint32_t valid_feedback_count;
+
+    uint32_t control_frame_id;
+
+    uint8_t status;
+
+    uint32_t request_count;
+
+    uint32_t response_count;
+
+    uint32_t pending_since_ms;
+
+    bool enable_acknowledged;
+
+    bool automatic_recovery;
+};
+
+// Classic CAN, standard ID, payload up to eight bytes. Register during startup.
+int fdcan_port_subscribe_raw(fdcan_device bus, uint32_t id);
+
+int fdcan_port_latest_raw(fdcan_device bus, uint32_t id, FdcanRawSnapshot &snapshot);
+
 int fdcan_port_init();
 
 int fdcan_port_bind(c610 &motor);
 
 int fdcan_port_bind(c620 &motor);
 
-int fdcan_port_bind(dm_motor &motor);
+int fdcan_port_bind(dm_motor &motor, bool automatic_recovery = true);
 
 int fdcan_port_bind(cubemars &motor);
+
+int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data);
+
+size_t fdcan_port_motor_count();
+
+void fdcan_port_set_motor_offline(size_t index, bool offline);
+
+int fdcan_port_build_offline_frame(size_t index, fdcan_frame &frame);
+
+int fdcan_port_build_recovery_frame(size_t index, bool clear_error, fdcan_frame &frame);
+
+int fdcan_port_build_control_frame(size_t index, fdcan_frame &frame);
 
 int fdcan_port_submit(fdcan_device device, const fdcan_frame &frame);
 

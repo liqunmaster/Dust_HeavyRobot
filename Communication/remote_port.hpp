@@ -19,6 +19,6 @@ struct remote_rx_chunk
     uint8_t bytes[128];
 };
 
-int remote_port_init();
+void remote_port_init();
 
 uint32_t remote_port_feedback_count();

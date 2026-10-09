@@ -63,17 +63,14 @@ void imu_thread_entry(void *, void *, void *)
     }
 }
 
-int imu_port_init()
+void imu_port_init()
 {
     const int ret = imu_device.init();
     if (ret != 0) {
-        return ret;
+        return;
     }
 
-    k_thread_create(&imu_thread, imu_stack, K_THREAD_STACK_SIZEOF(imu_stack),
-                    imu_thread_entry, nullptr, nullptr, nullptr,
-                    K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
-    return 0;
+    k_thread_create(&imu_thread, imu_stack, K_THREAD_STACK_SIZEOF(imu_stack), imu_thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
 }
 
 int imu_port_get_sample(imu_sample &sample)

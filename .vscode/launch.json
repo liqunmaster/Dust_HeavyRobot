@@ -19,7 +19,7 @@
                 "${workspaceFolder}/Board/hpm5361/hpm5361.cfg"
             ],
             "openOCDLaunchCommands": [
-                "adapter speed 500"
+                "adapter speed 100"
             ],
             "gdbPath": "D:/MCU/zephyr/zephyr-sdk/gnu/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gdb.exe",
             "runToEntryPoint": "main",

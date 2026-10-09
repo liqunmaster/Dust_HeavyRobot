@@ -12,12 +12,6 @@
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/util.h>
 
-#include <hpm_mcan_drv.h>
-
-#ifdef __cplusplus
-#undef __R
-#endif
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -134,11 +128,19 @@ extern "C"
 
     int bsp_fdcan_transmit(fdcan_device device, const fdcan_frame *frame, fdcan_timeout timeout);
 
-    typedef void (*fdcan_rx_callback_t)(fdcan_device device, const fdcan_frame *frame, void *user_data);
+    typedef struct
+    {
+        uint32_t id;
+        fdcan_id_type id_type;
+        fdcan_protocol protocol;
+        uint8_t length;
+        const uint8_t *data;
+    } fdcan_rx_view;
+
+    // The data pointer is valid only until the callback returns.
+    typedef void (*fdcan_rx_callback_t)(fdcan_device device, const fdcan_rx_view *frame, void *user_data);
 
     int bsp_fdcan_set_rx_callback(fdcan_device device, fdcan_rx_callback_t callback, void *user_data);
-
-    int bsp_fdcan_set_rx_interrupt(fdcan_device device, bool enabled);
 
     typedef void (*fdcan_tx_callback_t)(fdcan_device device, int error, void *user_data);
 

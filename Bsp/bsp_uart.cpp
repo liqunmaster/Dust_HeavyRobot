@@ -243,10 +243,12 @@ int Uart::transmit(const void *data, size_t length)
     return sent != 0U ? static_cast<int>(sent) : result;
 }
 
-int bsp_uart_init(const struct device *device)
+void bsp_uart_init(const struct device *device)
 {
     auto *port = bsp_uart_get(device);
-    return port != nullptr ? port->init() : -ENODEV;
+    if (port != nullptr) {
+        port->init();
+    }
 }
 
 int bsp_uart_receive(void *data, size_t length, const struct device *device)

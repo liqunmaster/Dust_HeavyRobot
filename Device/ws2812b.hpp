@@ -13,6 +13,6 @@ struct ws2812b_color
 
 int ws2812b_init();
 
-int ws2812b_set_color(ws2812b_color color);
+void ws2812b_set_color(ws2812b_color color);
 
-int ws2812b_off();
+void ws2812b_off();

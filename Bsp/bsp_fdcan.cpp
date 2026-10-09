@@ -69,22 +69,6 @@ namespace
         }
     }
 
-    static MCAN_Type *mcan_from_id(fdcan_device device)
-    {
-        switch (device) {
-            case FDCAN_DEVICE_CAN0:
-                return reinterpret_cast<MCAN_Type *>(DT_REG_ADDR(DT_NODELABEL(can0)));
-            case FDCAN_DEVICE_CAN1:
-                return reinterpret_cast<MCAN_Type *>(DT_REG_ADDR(DT_NODELABEL(can1)));
-            case FDCAN_DEVICE_CAN2:
-                return reinterpret_cast<MCAN_Type *>(DT_REG_ADDR(DT_NODELABEL(can2)));
-            case FDCAN_DEVICE_CAN3:
-                return reinterpret_cast<MCAN_Type *>(DT_REG_ADDR(DT_NODELABEL(can3)));
-            default:
-                return nullptr;
-        }
-    }
-
     static can_mode_t to_can_mode(const fdcan_context &context)
     {
         can_mode_t mode = 0U;
@@ -161,13 +145,15 @@ namespace
         if (context == nullptr || context->device != device) {
             return;
         }
+        if (atomic_set(&context->tx_active, 0) == 0) {
+            return;
+        }
 
         if (error == 0) {
             atomic_inc(&context->statistics.tx_completed);
         } else {
             atomic_inc(&context->statistics.tx_errors);
         }
-        atomic_clear(&context->tx_active);
         if (context->tx_callback != nullptr) {
             context->tx_callback(context->id, error, context->tx_user_data);
         }
@@ -180,13 +166,13 @@ namespace
             return;
         }
 
-        fdcan_frame received{};
-        received.id = frame->id;
-        received.id_type = (frame->flags & CAN_FRAME_IDE) != 0U ? FDCAN_ID_EXTENDED : FDCAN_ID_STANDARD;
-        received.protocol = (frame->flags & CAN_FRAME_FDF) != 0U ? FDCAN_PROTOCOL_FD : FDCAN_PROTOCOL_CLASSIC;
-        received.bitrate_switch = (frame->flags & CAN_FRAME_BRS) != 0U ? FDCAN_BRS_ENABLED : FDCAN_BRS_DISABLED;
-        received.length = can_dlc_to_bytes(frame->dlc);
-        memcpy(received.data, frame->data, received.length);
+        const fdcan_rx_view received{
+            frame->id,
+            (frame->flags & CAN_FRAME_IDE) != 0U ? FDCAN_ID_EXTENDED : FDCAN_ID_STANDARD,
+            (frame->flags & CAN_FRAME_FDF) != 0U ? FDCAN_PROTOCOL_FD : FDCAN_PROTOCOL_CLASSIC,
+            static_cast<uint8_t>(can_dlc_to_bytes(frame->dlc)),
+            frame->data,
+        };
 
         atomic_inc(&context->statistics.rx_received);
         if (context->rx_callback != nullptr) {
@@ -501,26 +487,6 @@ extern "C"
         return 0;
     }
 
-    int bsp_fdcan_set_rx_interrupt(fdcan_device device, bool enabled)
-    {
-        if (!valid_device(device) || !contexts[device].initialized) {
-            return -ENODEV;
-        }
-        MCAN_Type *can = mcan_from_id(device);
-        if (can == nullptr) {
-            return -ENODEV;
-        }
-
-        const unsigned int key = irq_lock();
-        if (enabled) {
-            mcan_enable_interrupts(can, MCAN_INT_RXFIFO0_NEW_MSG);
-        } else {
-            mcan_disable_interrupts(can, MCAN_INT_RXFIFO0_NEW_MSG);
-        }
-        irq_unlock(key);
-        return 0;
-    }
-
     int bsp_fdcan_set_tx_callback(fdcan_device device, fdcan_tx_callback_t callback, void *user_data)
     {
         if (!valid_device(device)) {
@@ -570,12 +536,6 @@ extern "C"
 
         atomic_set(&context.recovery_state, FDCAN_RECOVERY_CLEARING_TX);
         atomic_clear(&context.tx_active);
-
-        atomic_set(&context.recovery_state, FDCAN_RECOVERY_RECONFIGURING);
-        ret = apply_configuration(&context);
-        if (ret != 0) {
-            goto failed;
-        }
 
         atomic_set(&context.recovery_state, FDCAN_RECOVERY_RESTARTING);
         ret = can_start(context.device);
