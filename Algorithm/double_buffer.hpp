@@ -4,12 +4,13 @@
 #include <stdint.h>
 #include <string.h>
 
+// 双缓冲结构体：写缓冲与发布/读取分离，支持一致性快照
 struct double_buffer_t
 {
     uint8_t *storage[2]{};
     size_t size{};
     uint8_t published{};
-    uint8_t write_index{1U};
+    uint8_t write_index{1};
     uint32_t generation{};
 };
 

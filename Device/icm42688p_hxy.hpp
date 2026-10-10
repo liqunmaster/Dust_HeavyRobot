@@ -13,6 +13,7 @@
 #include "bsp_spi.hpp"
 #include "icm42688p_hxy_reg.h"
 
+// ICM42688P 惯性传感器采样数据，包含加速度计/陀螺仪与温度原始值
 struct icm42688phxy_sample
 {
     int16_t accel_raw[3];
@@ -20,6 +21,7 @@ struct icm42688phxy_sample
     int16_t temperature_raw;
 };
 
+// ICM42688P 六轴惯性传感器驱动类，基于 SPI 通信与外部中断
 class icm42688phxy final
 {
     public:

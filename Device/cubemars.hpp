@@ -7,6 +7,7 @@
 
 #include "bsp_fdcan.hpp"
 
+// CubeMars 电机反馈数据，解算后的角度/角速度/力矩
 struct CubemarsData
 {
     float now_angle;
@@ -15,10 +16,11 @@ struct CubemarsData
     float now_torque;
 };
 
+// CubeMars 电机控制类，支持 MIT 模式指令打包与反馈解算
 class cubemars
 {
     public:
-    int init(fdcan_device device, float angle_max = 12.5F, float omega_max = 50.0F, float torque_max = 65.0F);
+    int init(fdcan_device device, float angle_max = 12.5f, float omega_max = 50.0f, float torque_max = 65.0f);
 
     int set_mit(float position, float velocity, float kp, float kd, float torque);
 
@@ -36,17 +38,32 @@ class cubemars
 
     uint32_t get_feedback_count() const;
 
+    /**
+     * @brief 获取电机绑定的 FDCAN 通道
+     *
+     * @return FDCAN 通道枚举值
+    */
     fdcan_device device() const { return device_; }
 
-    uint32_t feedback_id() const { return 0x00U; }
+    /**
+     * @brief 获取反馈帧的标准 ID
+     *
+     * @return 固定的反馈 ID 0x00
+    */
+    uint32_t feedback_id() const { return 0x00; }
 
-    uint32_t control_frame_id() const { return 0x01U; }
+    /**
+     * @brief 获取控制帧的标准 ID
+     *
+     * @return 固定的控制 ID 0x01
+    */
+    uint32_t control_frame_id() const { return 0x01; }
 
     static void pack_mit(float position, float velocity, float kp, float kd, float torque, uint8_t out[8], float position_max, float velocity_max, float kp_max, float kd_max, float torque_max);
 
     private:
-    static constexpr float kp_max_ = 500.0F;
-    static constexpr float kd_max_ = 5.0F;
+    static constexpr float kp_max_ = 500.0f;
+    static constexpr float kd_max_ = 5.0f;
 
     static uint16_t encode(float value, float minimum, float maximum, uint8_t bits);
 
@@ -58,27 +75,27 @@ class cubemars
 
     fdcan_device device_ = FDCAN_DEVICE_COUNT;
 
-    float angle_max_ = 12.5F;
+    float angle_max_ = 12.5f;
 
-    float omega_max_ = 50.0F;
+    float omega_max_ = 50.0f;
 
-    float torque_max_ = 65.0F;
+    float torque_max_ = 65.0f;
 
-    float target_angle_ = 0.0F;
+    float target_angle_ = 0.0f;
 
-    float target_omega_ = 0.0F;
+    float target_omega_ = 0.0f;
 
-    float target_torque_ = 0.0F;
+    float target_torque_ = 0.0f;
 
-    float target_kp_ = 0.0F;
+    float target_kp_ = 0.0f;
 
-    float target_kd_ = 0.0F;
+    float target_kd_ = 0.0f;
 
     bool initialized_ = false;
 
     bool raw_angle_initialized_ = false;
 
-    float last_raw_angle_ = 0.0F;
+    float last_raw_angle_ = 0.0f;
 
     CubemarsData data_{};
 

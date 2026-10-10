@@ -7,12 +7,14 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/pwm.h>
 
+// 舵机输出通道枚举，选择 PWM 通道
 enum class servo_output : uint8_t
 {
-    p2 = 2U,
-    p3 = 3U,
+    p2 = 2,
+    p3 = 3,
 };
 
+// 舵机控制类，基于 PWM 设置脉宽或角度
 class servo final
 {
     public:

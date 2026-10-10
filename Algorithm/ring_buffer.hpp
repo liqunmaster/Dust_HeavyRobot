@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// 无锁单生产者单消费者环形缓冲区结构体
 struct ring_buffer_t
 {
     uint8_t *storage{};

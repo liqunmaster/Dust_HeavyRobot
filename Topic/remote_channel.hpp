@@ -15,14 +15,15 @@ struct input_sample;
 
 // DT7 left X/Y drive chassis X/Y; right X drives the lift.
 // Initial scales and signs should be tuned on the physical robot.
-#define REMOTE_MAX_FORWARD_M_S 0.5F
-#define REMOTE_MAX_LATERAL_M_S 0.5F
-#define REMOTE_AXIS_DEADZONE 0.05F
-#define REMOTE_LIFT_ANGLE_RANGE_RAD 12.5F
-#define REMOTE_DT7_CHASSIS_X_SIGN 1.0F
-#define REMOTE_DT7_CHASSIS_Y_SIGN 1.0F
-#define REMOTE_DT7_LIFT_SIGN 1.0F
+#define REMOTE_MAX_FORWARD_M_S 0.5f
+#define REMOTE_MAX_LATERAL_M_S 0.5f
+#define REMOTE_AXIS_DEADZONE 0.05f
+#define REMOTE_LIFT_ANGLE_RANGE_RAD 12.5f
+#define REMOTE_DT7_CHASSIS_X_SIGN 1.0f
+#define REMOTE_DT7_CHASSIS_Y_SIGN 1.0f
+#define REMOTE_DT7_LIFT_SIGN 1.0f
 
+// 底盘速度指令主题数据
 struct ChassisVelocityTopicData
 {
     float vx_m_s;
@@ -31,6 +32,7 @@ struct ChassisVelocityTopicData
     uint32_t timestamp_ms;
 };
 
+// 升降轴角度指令主题数据
 struct LiftAngleTopicData
 {
     float relative_angle_rad;

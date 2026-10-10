@@ -9,7 +9,7 @@
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/ring_buffer.h>
 
-#include "bsp_usb.h"
+#include "bsp_usb.hpp"
 
 void usb_port_init();
 

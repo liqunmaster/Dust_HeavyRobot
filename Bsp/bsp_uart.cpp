@@ -7,10 +7,16 @@ namespace
 
     UartDmaBuffers dma_buffers[7] __attribute__((section("AHB_SRAM"), aligned(4)));
 
+    /**
+     * @brief 标准输出字符写入钩子，将字符经 uart3 发送
+     *
+     * @param character 待写入的字符
+     * @return 发送成功返回原字符，失败返回 EOF
+    */
     int stdout_character(int character)
     {
         const uint8_t byte = static_cast<uint8_t>(character);
-        return uart3.transmit(&byte, 1U) == 1 ? byte : EOF;
+        return uart3.transmit(&byte, 1) == 1 ? byte : EOF;
     }
 }
 Uart uart0{DEVICE_DT_GET(DT_NODELABEL(uart0)), dma_buffers[0]};
@@ -21,7 +27,13 @@ Uart uart4{DEVICE_DT_GET(DT_NODELABEL(uart4)), dma_buffers[4]};
 Uart uart5{DEVICE_DT_GET(DT_NODELABEL(uart5)), dma_buffers[5]};
 Uart uart6{DEVICE_DT_GET(DT_NODELABEL(uart6)), dma_buffers[6]};
 
-Uart *bsp_uart_get(const struct device *device)
+    /**
+     * @brief 根据 Zephyr 设备句柄查找对应的 Uart 对象
+     *
+     * @param device Zephyr UART 设备句柄，为空时返回默认的 uart3
+     * @return 匹配的 Uart 对象指针，未找到返回 nullptr
+    */
+    Uart *bsp_uart_get(const struct device *device)
 {
     if (device == nullptr) {
         return &uart3;
@@ -35,12 +47,22 @@ Uart *bsp_uart_get(const struct device *device)
     return nullptr;
 }
 
-bool Uart::is_ready() const
-{
-    return atomic_get(&init_state_) == 2;
-}
+    /**
+     * @brief 查询串口是否已完成初始化
+     *
+     * @return 初始化完成返回 true，否则返回 false
+    */
+    bool Uart::is_ready() const
+    {
+        return atomic_get(&init_state_) == 2;
+    }
 
-int Uart::init()
+    /**
+     * @brief 初始化串口（配置回调、环形缓冲并启动接收）
+     *
+     * @return 成功返回 0，失败返回负错误码
+    */
+    int Uart::init()
 {
     if (k_is_in_isr()) {
         return -EWOULDBLOCK;
@@ -86,7 +108,14 @@ int Uart::init()
     return 0;
 }
 
-void Uart::uart_callback(const struct device *device, struct uart_event *event, void *user_data)
+    /**
+     * @brief Zephyr UART 驱动回调，锁中断后将事件交给成员处理
+     *
+     * @param device Zephyr UART 设备句柄
+     * @param event UART 事件
+     * @param user_data 透传的 Uart 对象指针
+    */
+    void Uart::uart_callback(const struct device *device, struct uart_event *event, void *user_data)
 {
     auto *port = static_cast<Uart *>(user_data);
     if (port == nullptr || event == nullptr || device != port->device_) {
@@ -97,7 +126,12 @@ void Uart::uart_callback(const struct device *device, struct uart_event *event, 
     irq_unlock(key);
 }
 
-void Uart::handle_event(const struct uart_event &event)
+    /**
+     * @brief 处理各类 UART 事件（接收、发送完成、停止等）
+     *
+     * @param event UART 事件
+    */
+    void Uart::handle_event(const struct uart_event &event)
 {
     switch (event.type) {
         case UART_RX_RDY:
@@ -106,7 +140,7 @@ void Uart::handle_event(const struct uart_event &event)
             }
             break;
         case UART_RX_BUF_REQUEST:
-            for (size_t i = 0U; i < 2U; ++i) {
+            for (size_t i = 0; i < 2; ++i) {
                 if (!rx_owned_[i]) {
                     rx_owned_[i] = true;
                     if (uart_rx_buf_rsp(device_, dma_.rx[i], sizeof(dma_.rx[i])) != 0) {
@@ -117,7 +151,7 @@ void Uart::handle_event(const struct uart_event &event)
             }
             break;
         case UART_RX_BUF_RELEASED:
-            for (size_t i = 0U; i < 2U; ++i) {
+            for (size_t i = 0; i < 2; ++i) {
                 if (event.data.rx_buf.buf == dma_.rx[i]) {
                     rx_owned_[i] = false;
                 }
@@ -142,7 +176,12 @@ void Uart::handle_event(const struct uart_event &event)
     }
 }
 
-int Uart::start_rx()
+    /**
+     * @brief 启动 DMA 接收
+     *
+     * @return 成功返回 0，失败返回负错误码
+    */
+    int Uart::start_rx()
 {
     const unsigned int key = irq_lock();
     rx_owned_[0] = true;
@@ -157,7 +196,14 @@ int Uart::start_rx()
     return result;
 }
 
-int Uart::receive(void *data, size_t length)
+    /**
+     * @brief 从串口接收数据，阻塞读取至指定长度
+     *
+     * @param data 接收数据缓冲区
+     * @param length 期望接收的字节数
+     * @return 实际接收的字节数，失败返回负错误码
+    */
+    int Uart::receive(void *data, size_t length)
 {
     if (k_is_in_isr()) {
         return -EWOULDBLOCK;
@@ -165,13 +211,13 @@ int Uart::receive(void *data, size_t length)
     if (!is_ready()) {
         return -ENODEV;
     }
-    if (data == nullptr && length != 0U) {
+    if (data == nullptr && length != 0) {
         return -EINVAL;
     }
     if (length > INT_MAX) {
         return -EMSGSIZE;
     }
-    if (length == 0U) {
+    if (length == 0) {
         return 0;
     }
     const unsigned int key = irq_lock();
@@ -185,7 +231,14 @@ int Uart::receive(void *data, size_t length)
     return count != 0 ? count : result;
 }
 
-int Uart::transmit(const void *data, size_t length)
+    /**
+     * @brief 向串口发送数据，分块写入 DMA 并等待发送完成
+     *
+     * @param data 待发送数据缓冲区
+     * @param length 待发送的字节数
+     * @return 实际发送的字节数，失败返回负错误码
+    */
+    int Uart::transmit(const void *data, size_t length)
 {
     if (k_is_in_isr()) {
         return -EWOULDBLOCK;
@@ -193,29 +246,29 @@ int Uart::transmit(const void *data, size_t length)
     if (!is_ready()) {
         return -ENODEV;
     }
-    if (data == nullptr && length != 0U) {
+    if (data == nullptr && length != 0) {
         return -EINVAL;
     }
     if (length > INT_MAX) {
         return -EMSGSIZE;
     }
-    if (length == 0U) {
+    if (length == 0) {
         return 0;
     }
 
     k_mutex_lock(&tx_lock_, K_FOREVER);
     const auto *bytes = static_cast<const uint8_t *>(data);
-    size_t sent = 0U;
+    size_t sent = 0;
     int result = atomic_get(&tx_busy_) ? -EBUSY : 0;
     while (result == 0 && sent < length) {
         const size_t chunk = ring_buffer_write(&tx_buffer_, bytes + sent, length - sent);
-        if (chunk == 0U) {
+        if (chunk == 0) {
             result = -ENOBUFS;
             break;
         }
         ring_buffer_read(&tx_buffer_, dma_.tx, chunk);
         k_sem_reset(&tx_done_);
-        tx_count_ = 0U;
+        tx_count_ = 0;
         tx_error_ = 0;
         atomic_set(&tx_busy_, 1);
         result = uart_tx(device_, dma_.tx, chunk, SYS_FOREVER_US);
@@ -240,10 +293,15 @@ int Uart::transmit(const void *data, size_t length)
         }
     }
     k_mutex_unlock(&tx_lock_);
-    return sent != 0U ? static_cast<int>(sent) : result;
+    return sent != 0 ? static_cast<int>(sent) : result;
 }
 
-void bsp_uart_init(const struct device *device)
+    /**
+     * @brief 初始化指定设备的串口
+     *
+     * @param device Zephyr UART 设备句柄，为空时使用默认串口
+    */
+    void bsp_uart_init(const struct device *device)
 {
     auto *port = bsp_uart_get(device);
     if (port != nullptr) {
@@ -251,19 +309,42 @@ void bsp_uart_init(const struct device *device)
     }
 }
 
-int bsp_uart_receive(void *data, size_t length, const struct device *device)
+    /**
+     * @brief 从指定串口接收数据
+     *
+     * @param data 接收缓冲区
+     * @param length 期望接收的字节数
+     * @param device Zephyr UART 设备句柄，为空时使用默认串口
+     * @return 实际接收字节数，失败返回负错误码
+    */
+    int bsp_uart_receive(void *data, size_t length, const struct device *device)
 {
     auto *port = bsp_uart_get(device);
     return port != nullptr ? port->receive(data, length) : -ENODEV;
 }
 
-int bsp_uart_transmit(const void *data, size_t length, const struct device *device)
+    /**
+     * @brief 向指定串口发送数据
+     *
+     * @param data 待发送缓冲区
+     * @param length 待发送的字节数
+     * @param device Zephyr UART 设备句柄，为空时使用默认串口
+     * @return 实际发送字节数，失败返回负错误码
+    */
+    int bsp_uart_transmit(const void *data, size_t length, const struct device *device)
 {
     auto *port = bsp_uart_get(device);
     return port != nullptr ? port->transmit(data, length) : -ENODEV;
 }
 
-extern "C" int printf(const char *format, ...)
+    /**
+     * @brief printf 重定向实现，将格式化字符串经 uart3 输出
+     *
+     * @param format 格式化字符串
+     * @param ... 可变参数
+     * @return 输出的字符数，失败返回 EOF
+    */
+    extern "C" int printf(const char *format, ...)
 {
     if (k_is_in_isr()) {
         errno = EWOULDBLOCK;

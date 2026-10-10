@@ -1,20 +1,34 @@
 #include "dji_c620.hpp"
 
-C620RxData c620::decode_feedback(const uint8_t *data)
+    /**
+     * @brief 解码 8 字节原始反馈为大端序结构体
+     *
+     * @param data 原始反馈数据指针
+     * @return 解码后的反馈结构体
+    */
+    C620RxData c620::decode_feedback(const uint8_t *data)
 {
     const uint64_t frame = sys_get_be64(data);
     C620RxData decoded{};
-    decoded.encoder = static_cast<uint16_t>((frame >> 48U) & 0xFFFFU);
-    decoded.omega = dji_motor::signed_value(static_cast<uint16_t>((frame >> 32U) & 0xFFFFU));
-    decoded.current = static_cast<uint16_t>((frame >> 16U) & 0xFFFFU);
-    decoded.temperature = static_cast<uint8_t>((frame >> 8U) & 0xFFU);
-    decoded.error = static_cast<uint8_t>(frame & 0xFFU);
+    decoded.encoder = static_cast<uint16_t>((frame >> 48) & 0xFFFF);
+    decoded.omega = dji_motor::signed_value(static_cast<uint16_t>((frame >> 32) & 0xFFFF));
+    decoded.current = static_cast<uint16_t>((frame >> 16) & 0xFFFF);
+    decoded.temperature = static_cast<uint8_t>((frame >> 8) & 0xFF);
+    decoded.error = static_cast<uint8_t>(frame & 0xFF);
     return decoded;
 }
 
-int c620::init(fdcan_device device, C620_ID id, float gear_ratio)
+    /**
+     * @brief 初始化 C620 电机，绑定通道、ID 与减速比
+     *
+     * @param device CAN 通道编号
+     * @param id 电机 ID
+     * @param gear_ratio 减速比
+     * @return 成功返回 0，参数非法返回负错误码
+    */
+    int c620::init(fdcan_device device, C620_ID id, float gear_ratio)
 {
-    if (!dji_motor::valid_device(device) || !dji_motor::valid_id(id) || !__builtin_isfinite(gear_ratio) || gear_ratio <= 0.0F) {
+    if (!dji_motor::valid_device(device) || !dji_motor::valid_id(id) || !__builtin_isfinite(gear_ratio) || gear_ratio <= 0.0f) {
         return -EINVAL;
     }
 
@@ -32,7 +46,13 @@ int c620::init(fdcan_device device, C620_ID id, float gear_ratio)
     return 0;
 }
 
-int c620::set_current(float current)
+    /**
+     * @brief 设定电机的目标电流（转换为原始指令写入）
+     *
+     * @param current 目标电流（安培）
+     * @return 成功返回 0，否则返回负错误码
+    */
+    int c620::set_current(float current)
 {
     if (!initialized_) {
         return -ENODEV;
@@ -45,7 +65,13 @@ int c620::set_current(float current)
     return dji_motor::set(device_, static_cast<uint8_t>(id_), command);
 }
 
-int c620::build_control_frame(fdcan_frame &frame) const
+    /**
+     * @brief 构造本电机所属分组的控制报文字段
+     *
+     * @param frame 输出控制报文字段
+     * @return 成功返回 0，否则返回负错误码
+    */
+    int c620::build_control_frame(fdcan_frame &frame) const
 {
     if (!initialized_) {
         return -ENODEV;
@@ -53,7 +79,12 @@ int c620::build_control_frame(fdcan_frame &frame) const
     return dji_motor::build_control_frame(device_, static_cast<uint8_t>(id_), frame);
 }
 
-void c620::unpack_feedback(const uint8_t *data)
+    /**
+     * @brief 更新反馈数据并连续累加计算角度、角速度与温度
+     *
+     * @param data 原始反馈数据指针
+    */
+    void c620::unpack_feedback(const uint8_t *data)
 {
     const C620RxData next = decode_feedback(data);
     const k_spinlock_key_t key = k_spin_lock(&feedback_lock_);
@@ -87,7 +118,13 @@ void c620::unpack_feedback(const uint8_t *data)
     k_spin_unlock(&feedback_lock_, key);
 }
 
-int c620::process_feedback(const fdcan_frame &frame)
+    /**
+     * @brief 处理一帧反馈报文，校验后更新内部状态
+     *
+     * @param frame 收到的反馈报文
+     * @return 成功返回 0，否则返回负错误码
+    */
+    int c620::process_feedback(const fdcan_frame &frame)
 {
     if (!initialized_) {
         return -ENODEV;
@@ -102,20 +139,35 @@ int c620::process_feedback(const fdcan_frame &frame)
     return 0;
 }
 
-uint32_t c620::get_feedback_count() const
-{
-    return static_cast<uint32_t>(atomic_get(&feedback_count_));
-}
+    /**
+     * @brief 获取反馈报文统计计数
+     *
+     * @return 已处理的反馈次数
+    */
+    uint32_t c620::get_feedback_count() const
+    {
+        return static_cast<uint32_t>(atomic_get(&feedback_count_));
+    }
 
-C620RxData c620::get_rx_data() const
-{
-    const k_spinlock_key_t key = k_spin_lock(&feedback_lock_);
-    const C620RxData snapshot = rx_data_;
-    k_spin_unlock(&feedback_lock_, key);
-    return snapshot;
-}
+    /**
+     * @brief 线程安全地获取最近一次原始反馈数据
+     *
+     * @return 反馈快照结构体
+    */
+    C620RxData c620::get_rx_data() const
+    {
+        const k_spinlock_key_t key = k_spin_lock(&feedback_lock_);
+        const C620RxData snapshot = rx_data_;
+        k_spin_unlock(&feedback_lock_, key);
+        return snapshot;
+    }
 
-C620Data c620::get_data() const
+    /**
+     * @brief 线程安全地获取处理后的数据快照
+     *
+     * @return 数据快照结构体
+    */
+    C620Data c620::get_data() const
 {
     const k_spinlock_key_t key = k_spin_lock(&feedback_lock_);
     const C620Data snapshot = data_;

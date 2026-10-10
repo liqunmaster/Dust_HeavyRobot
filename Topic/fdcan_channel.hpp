@@ -9,6 +9,7 @@
 
 #include "bsp_fdcan.hpp"
 
+// 电机类型枚举
 enum class FdcanMotorKind : uint8_t
 {
     c610,
@@ -17,8 +18,9 @@ enum class FdcanMotorKind : uint8_t
     cubemars,
 };
 
-constexpr size_t FDCAN_CONTROL_SLOT_COUNT = 32U;
+constexpr size_t FDCAN_CONTROL_SLOT_COUNT = 32;
 
+// 电机反馈主题数据
 struct FdcanFeedbackTopicData
 {
     fdcan_device bus;
@@ -32,6 +34,7 @@ struct FdcanFeedbackTopicData
     uint32_t timestamp_ms;
 };
 
+// 电机查询键（总线/ID/类型）
 struct FdcanFeedbackKey
 {
     fdcan_device bus;
@@ -39,6 +42,7 @@ struct FdcanFeedbackKey
     FdcanMotorKind kind;
 };
 
+// 电机控制指令主题数据
 struct FdcanControlTopicData
 {
     fdcan_device bus;

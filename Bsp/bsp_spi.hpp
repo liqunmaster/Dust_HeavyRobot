@@ -11,8 +11,9 @@
 
 #include "ring_buffer.hpp"
 
-#define SPI_BUFFER_SIZE 64U
+#define SPI_BUFFER_SIZE 64
 
+// SPI 实例结构体，封装设备句柄、配置、互斥锁与收发环形缓冲
 struct spi
 {
     const struct device *device;

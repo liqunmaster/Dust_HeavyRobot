@@ -9,12 +9,17 @@
 #include "usb_port.hpp"
 
 
+/**
+ * @brief 程序入口，完成各模块初始化后进入主循环
+ *
+ * @return 无（正常情况不会返回）
+*/
 int main(void)
 {
     bsp_uart_init();
     app_chassis_init();
     app_liftup_init();
-    app_booster_init();
+    // app_booster_init();
     health_monitor_init();
     remote_port_init();
     ins_init();

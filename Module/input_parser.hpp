@@ -7,6 +7,7 @@
 #include "remote_vt03.hpp"
 #include "remote_types.hpp"
 
+// 一次解码得到的遥控采样数据
 struct input_sample
 {
     remote_protocol protocol;
@@ -21,11 +22,17 @@ struct input_sample
     };
 };
 
+// 遥控数据流解析器，负责从字节流中识别并解码各协议帧
 class input_stream_parser
 {
     public:
     using sample_callback = void (*)(const input_sample &, void *);
 
+    /**
+     * @brief 构造解析器并指定数据来源
+     *
+     * @param source 数据来源串口
+    */
     explicit input_stream_parser(remote_uart_source source) : source_(source) {}
 
     void reset();
@@ -33,6 +40,7 @@ class input_stream_parser
     void feed(const uint8_t *data, size_t length, uint32_t timestamp_ms, sample_callback callback, void *context);
 
     private:
+    // 解析过程的帧状态枚举
     enum class parse_state : uint8_t
     {
         header,
@@ -51,9 +59,9 @@ class input_stream_parser
 
     remote_protocol candidate_ = remote_protocol::none;
 
-    size_t expected_length_ = 0U;
+    size_t expected_length_ = 0;
 
-    size_t length_ = 0U;
+    size_t length_ = 0;
 
     uint8_t buffer_[128]{};
 };

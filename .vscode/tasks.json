@@ -26,20 +26,21 @@
         {
             "label": "Flash",
             "type": "process",
-            "dependsOn": "Build",
-            "command": "D:/MCU/hpm/tools/openocd/openocd.exe",
+            "command": "powershell.exe",
             "args": [
-                "-s", "D:/MCU/hpm/tools/openocd/tcl",
-                "-s", "D:/MCU/hpm/hpm_sdk/boards/openocd",
-                "-f", "${workspaceFolder}/Board/hpm5361/hpm5361.cfg",
-                "-c", "adapter speed 100",
-                "-c", "hpm5361.cpu0 configure -work-area-phys 0x0 -work-area-size 0x20000 -work-area-backup 0",
-                "-c", "program {${workspaceFolder}/build/zephyr/Dust_HeavyRobot.elf} verify reset exit"
+                "-NoProfile", "-NonInteractive", "-Command",
+                "& 'D:/MCU/zephyr/zephyrproject/.venv/Scripts/west.exe' build -b hpm5361icb -s '${workspaceFolder}' -d '${workspaceFolder}/build' -p never; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Location -LiteralPath '${workspaceFolder}'; & 'D:/MCU/hpm/tools/openocd/openocd.exe' -s 'D:/MCU/hpm/tools/openocd/tcl' -s 'D:/MCU/hpm/hpm_sdk/boards/openocd' -f '${workspaceFolder}/Board/hpm5361/hpm5361.cfg' -c 'adapter speed 100' -c 'hpm5361.cpu0 configure -work-area-phys 0x0 -work-area-size 0x20000 -work-area-backup 0' -c 'program {${workspaceFolder}/build/zephyr/Dust_HeavyRobot.elf} verify reset exit'; exit $LASTEXITCODE"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "D:/MCU/zephyr/zephyrproject",
+                "env": {
+                    "ZEPHYR_BASE": "D:/MCU/zephyr/zephyrproject/zephyr",
+                    "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+                    "ZEPHYR_SDK_INSTALL_DIR": "D:/MCU/zephyr/zephyr-sdk",
+                    "HPM_SDK_DIR": "D:/MCU/hpm/hpm_sdk"
+                }
             },
-            "problemMatcher": []
+            "problemMatcher": ["$gcc"]
         }
     ]
 }

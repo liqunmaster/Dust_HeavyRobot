@@ -16,8 +16,9 @@
 class c610;
 class c620;
 
-constexpr size_t FDCAN_PORT_MAX_MOTORS = 32U;
+constexpr size_t FDCAN_PORT_MAX_MOTORS = 32;
 
+// 一次原始 CAN 帧的快照，保存数据字节、帧长与时间戳
 struct FdcanRawSnapshot
 {
     uint8_t data[8];
@@ -25,6 +26,7 @@ struct FdcanRawSnapshot
     uint32_t timestamp_ms;
 };
 
+// 单台电机在健康监控视角下的状态数据，用于判断在线/离线与自动恢复
 struct FdcanMotorHealthData
 {
     FdcanMotorKind kind;

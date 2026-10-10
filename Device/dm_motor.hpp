@@ -10,6 +10,7 @@
 
 #include "bsp_fdcan.hpp"
 
+// 达妙电机控制模式枚举
 enum DmControlMode
 {
     MOTOR_DM_CONTROL_METHOD_NORMAL_MIT = 1,
@@ -18,6 +19,7 @@ enum DmControlMode
     MOTOR_DM_CONTROL_METHOD_NORMAL_EMIT = 4,
 };
 
+// 达妙电机 MIT 模式的量程限制结构体
 struct DmMitLimits
 {
     float position;
@@ -25,6 +27,7 @@ struct DmMitLimits
     float torque;
 };
 
+// 达妙电机原始反馈数据解包结构体
 struct DmRxData
 {
     uint8_t motor_id;
@@ -36,6 +39,7 @@ struct DmRxData
     uint8_t rotor_temperature;
 };
 
+// 达妙电机处理后的数据结构体
 struct DmData
 {
     float now_angle;
@@ -46,11 +50,12 @@ struct DmData
     uint8_t status;
 };
 
+// 达妙（DM）系列无刷电机驱动类
 class dm_motor
 {
     public:
     int init(fdcan_device device, uint8_t motor_id, DmControlMode mode, DmMitLimits limits,
-             fdcan_protocol protocol, uint16_t master_id = 0U, uint16_t tx_id_base = 0U);
+             fdcan_protocol protocol, uint16_t master_id = 0, uint16_t tx_id_base = 0);
 
     int set_mit(float position, float velocity, float kp, float kd, float torque);
 
@@ -80,14 +85,39 @@ class dm_motor
 
     DmControlMode get_mode() const;
 
+    /**
+     * @brief 获取绑定的 CAN 通道编号
+     *
+     * @return 通道编号
+    */
     fdcan_device device() const { return device_; }
 
+    /**
+     * @brief 获取电机 ID
+     *
+     * @return 电机 ID
+    */
     uint8_t motor_id() const { return motor_id_; }
 
+    /**
+     * @brief 获取反馈报文 ID（主机 ID）
+     *
+     * @return 反馈报文 ID
+    */
     uint32_t feedback_id() const { return master_id_; }
 
+    /**
+     * @brief 获取反馈报文使用的协议类型
+     *
+     * @return 协议类型
+    */
     fdcan_protocol feedback_protocol() const { return protocol_; }
 
+    /**
+     * @brief 获取控制报文 ID
+     *
+     * @return 控制报文 ID
+    */
     uint32_t control_frame_id() const;
 
     private:
@@ -115,11 +145,11 @@ class dm_motor
 
     fdcan_device device_ = FDCAN_DEVICE_COUNT;
 
-    uint8_t motor_id_ = 0U;
+    uint8_t motor_id_ = 0;
 
-    uint16_t master_id_ = 0U;
+    uint16_t master_id_ = 0;
 
-    uint16_t tx_id_base_ = 0U;
+    uint16_t tx_id_base_ = 0;
 
     DmControlMode mode_ = DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT;
 
@@ -135,7 +165,7 @@ class dm_motor
 
     uint8_t tx_data_[8]{};
 
-    uint8_t tx_length_ = 0U;
+    uint8_t tx_length_ = 0;
 
     DmRxData rx_data_{};
 

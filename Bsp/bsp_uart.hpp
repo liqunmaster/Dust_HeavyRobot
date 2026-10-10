@@ -14,19 +14,27 @@
 
 #include "ring_buffer.hpp"
 
+// UART DMA 缓冲区结构体，保存双缓冲的接收缓冲与发送缓冲
 struct UartDmaBuffers
 {
     uint8_t rx[2][128];
     uint8_t tx[128];
 };
 
+// UART 驱动程序类，基于 DMA 提供非阻塞收发与环形缓冲
 class Uart
 {
     public:
-    static constexpr size_t rx_capacity = 512U;
-    static constexpr size_t tx_capacity = 128U;
-    static constexpr size_t dma_capacity = 128U;
+    static constexpr size_t rx_capacity = 512;
+    static constexpr size_t tx_capacity = 128;
+    static constexpr size_t dma_capacity = 128;
 
+    /**
+     * @brief 构造函数，绑定 Zephyr UART 设备与 DMA 缓冲区
+     *
+     * @param device Zephyr UART 设备句柄
+     * @param dma DMA 缓冲区引用
+    */
     constexpr Uart(const struct device *device, UartDmaBuffers &dma)
         : device_(device), dma_(dma) {}
 
@@ -40,6 +48,11 @@ class Uart
     int transmit(const void *data, size_t length);
     bool is_ready() const;
 
+    /**
+     * @brief 获取绑定的 Zephyr UART 设备句柄
+     *
+     * @return 设备句柄
+    */
     const struct device *device() const { return device_; }
 
     private:
@@ -59,7 +72,7 @@ class Uart
     atomic_t init_state_ = 0;
     atomic_t rx_overflow_ = 0;
     atomic_t tx_busy_ = 0;
-    size_t tx_count_ = 0U;
+    size_t tx_count_ = 0;
     int tx_error_ = 0;
     struct k_mutex tx_lock_{};
     struct k_sem tx_done_{};

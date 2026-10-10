@@ -10,6 +10,7 @@
 #include "quaternion.hpp"
 #include "type_math.hpp"
 
+// 惯性导航解算输出的欧拉角
 struct ins_euler_angles
 {
     float roll_rad;

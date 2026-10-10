@@ -11,6 +11,7 @@
 #include "pid.hpp"
 
 
+// 发射机（推弹器）的工作状态枚举
 enum class BoosterState : uint8_t
 {
     disabled,
@@ -22,6 +23,7 @@ enum class BoosterState : uint8_t
     motor_fault,
 };
 
+// 发射机状态信息结构体
 struct BoosterStatus
 {
     BoosterState state;

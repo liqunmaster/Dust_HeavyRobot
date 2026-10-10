@@ -7,9 +7,9 @@ namespace
                                     liftup_config::motor_present_can1,
                                     liftup_config::motor_present_can2,
                                     liftup_config::motor_present_can3};
-    constexpr uint32_t period_ms = 1U;
-    constexpr uint32_t command_timeout_ms = 100U;
-    constexpr uint32_t feedback_timeout_ms = 100U;
+    constexpr uint32_t period_ms = 1;
+    constexpr uint32_t command_timeout_ms = 100;
+    constexpr uint32_t feedback_timeout_ms = 100;
     constexpr float direction[4]{liftup_config::motor_direction_can0,
                                  liftup_config::motor_direction_can1,
                                  liftup_config::motor_direction_can2,
@@ -27,15 +27,25 @@ namespace
     K_SEM_DEFINE(lift_sem, 0, 1);
     struct k_timer lift_timer;
 
+    /**
+     * @brief 抬升定时器回调，唤醒控制线程
+     *
+     * @param timer 触发回调的定时器
+    */
     void lift_timer_callback(struct k_timer *)
     {
         k_sem_give(&lift_sem);
     }
 
+    /**
+     * @brief 抬升单次控制步进，对四路电机执行位置控制
+     *
+     * @param dt_s 控制周期（秒）
+    */
     void control_step(float dt_s)
     {
         const uint32_t now_ms = k_uptime_get_32();
-        for (uint8_t index = 0U; index < 4U; ++index) {
+        for (uint8_t index = 0; index < 4; ++index) {
             if (!motor_present[index]) {
                 continue;
             }
@@ -45,9 +55,9 @@ namespace
             const bool feedback_fresh = has_feedback && now_ms - feedback.timestamp_ms < feedback_timeout_ms;
             LiftAngleTopicData request{};
             const bool command_fresh = remote_channel_latest_lift(index, request) == 0 && now_ms - request.timestamp_ms < command_timeout_ms;
-            const float target_rad = command_fresh ? request.relative_angle_rad : 0.0F;
-            float torque_nm = 0.0F;
-            float measured_rad = 0.0F;
+            const float target_rad = command_fresh ? request.relative_angle_rad : 0.0f;
+            float torque_nm = 0.0f;
+            float measured_rad = 0.0f;
             if (feedback_fresh) {
                 if (!has_origin[index]) {
                     origin_rad[index] = feedback.angle_rad;
@@ -62,7 +72,7 @@ namespace
 
             int result = 0;
             if (feedback_fresh) {
-                result = motors[index].set_mit(0.0F, 0.0F, 0.0F, 0.0F, torque_nm);
+                result = motors[index].set_mit(0.0f, 0.0f, 0.0f, 0.0f, torque_nm);
                 if (result == 0) {
                     fdcan_frame frame{};
                     result = motors[index].build_control_frame(frame);
@@ -73,34 +83,45 @@ namespace
             }
             const LiftMotorStatus snapshot{feedback_fresh,
                                            has_feedback ? now_ms - feedback.timestamp_ms : UINT32_MAX,
-                                           has_feedback ? feedback.valid_count : 0U,
+                                           has_feedback ? feedback.valid_count : 0,
                                            target_rad, measured_rad, torque_nm, result,
-                                           0U, 0U, 0U, 0U};
+                                           0, 0, 0, 0};
             const k_spinlock_key_t key = k_spin_lock(&status_lock);
             motor_status[index] = snapshot;
             k_spin_unlock(&status_lock, key);
         }
     }
 
+    /**
+     * @brief 抬升控制线程入口，等待信号量并循环执行控制步进
+     *
+     * @param arg1 线程参数 1
+     * @param arg2 线程参数 2
+     * @param arg3 线程参数 3
+    */
     void thread_entry(void *, void *, void *)
     {
         while (1) {
             k_sem_take(&lift_sem, K_FOREVER);
-            control_step(static_cast<float>(period_ms) * 0.001F);
+            control_step(static_cast<float>(period_ms) * 0.001f);
         }
     }
 }
 
+/**
+ * @brief 初始化抬升模块，配置四路电机及位置-速度环并启动控制线程
+ *
+*/
 void app_liftup_init()
 {
     if (initialized) {
         return;
     }
-    if (liftup_config::max_relative_angle_rad <= 0.0F || liftup_config::motor_angle_max_rad <= 0.0F || liftup_config::motor_angle_max_rad > 12.5F || liftup_config::max_speed_rad_s <= 0.0F || liftup_config::max_speed_rad_s > 50.0F || liftup_config::max_torque_nm <= 0.0F || liftup_config::max_torque_nm > 65.0F) {
+    if (liftup_config::max_relative_angle_rad <= 0.0f || liftup_config::motor_angle_max_rad <= 0.0f || liftup_config::motor_angle_max_rad > 12.5f || liftup_config::max_speed_rad_s <= 0.0f || liftup_config::max_speed_rad_s > 50.0f || liftup_config::max_torque_nm <= 0.0f || liftup_config::max_torque_nm > 65.0f) {
         return;
     }
     for (float motor_direction : direction) {
-        if (motor_direction != 1.0F && motor_direction != -1.0F) {
+        if (motor_direction != 1.0f && motor_direction != -1.0f) {
             return;
         }
     }
@@ -110,17 +131,17 @@ void app_liftup_init()
     position_pid.ki = liftup_config::position_ki;
     position_pid.kd = liftup_config::position_kd;
     position_pid.output_limit = liftup_config::max_speed_rad_s;
-    position_pid.dt = 0.001F;
+    position_pid.dt = 0.001f;
 
     alg::PidConfig speed_pid{};
     speed_pid.kp = liftup_config::speed_kp;
     speed_pid.ki = liftup_config::speed_ki;
     speed_pid.kd = liftup_config::speed_kd;
-    speed_pid.integral_limit = liftup_config::max_torque_nm * 0.5F;
+    speed_pid.integral_limit = liftup_config::max_torque_nm * 0.5f;
     speed_pid.output_limit = liftup_config::max_torque_nm;
-    speed_pid.dt = 0.001F;
+    speed_pid.dt = 0.001f;
 
-    for (uint8_t index = 0U; index < 4U; ++index) {
+    for (uint8_t index = 0; index < 4; ++index) {
         if (!motor_present[index]) {
             continue;
         }
@@ -135,7 +156,7 @@ void app_liftup_init()
         }
         loops[index].configure(position_pid, speed_pid);
     }
-    for (uint8_t index = 0U; index < 4U; ++index) {
+    for (uint8_t index = 0; index < 4; ++index) {
         if (!motor_present[index]) {
             continue;
         }
@@ -150,22 +171,34 @@ void app_liftup_init()
     k_thread_create(&lift_thread, lift_task, K_THREAD_STACK_SIZEOF(lift_task), thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
 }
 
+/**
+ * @brief 设置单个抬升电机的目标相对角度并发布给控制线程
+ *
+ * @param can_index 目标电机所在的 CAN 通道索引（0~3）
+ * @param relative_angle_rad 相对原点角度（弧度）
+*/
 void app_liftup_set_target(uint8_t can_index, float relative_angle_rad)
 {
     if (!initialized) {
         return;
     }
-    if (can_index >= 4U || !motor_present[can_index] || !std::isfinite(relative_angle_rad) ||
+    if (can_index >= 4 || !motor_present[can_index] || !std::isfinite(relative_angle_rad) ||
         std::fabs(relative_angle_rad) > liftup_config::max_relative_angle_rad) {
         return;
     }
     remote_channel_publish_lift(can_index, relative_angle_rad);
 }
 
+/**
+ * @brief 获取单个抬升电机的当前状态信息
+ *
+ * @param can_index 目标电机所在的 CAN 通道索引（0~3）
+ * @param status 用于接收状态信息的输出参数
+*/
 void app_liftup_get_status(uint8_t can_index, LiftMotorStatus &status)
 {
     status = {};
-    if (can_index >= 4U || !initialized) {
+    if (can_index >= 4 || !initialized) {
         return;
     }
     const k_spinlock_key_t key = k_spin_lock(&status_lock);

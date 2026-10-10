@@ -19,9 +19,9 @@
 #undef __R
 #endif
 
-#define BSP_PWM_MAX_PULSES 24U
+#define BSP_PWM_MAX_PULSES 24
 
-#define BSP_PWM_RESET_PULSES 48U
+#define BSP_PWM_RESET_PULSES 48
 
 int bsp_pwm_init(uint32_t period_ns);
 

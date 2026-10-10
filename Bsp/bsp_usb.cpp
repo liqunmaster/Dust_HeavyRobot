@@ -1,4 +1,4 @@
-#include "bsp_usb.h"
+#include "bsp_usb.hpp"
 
 #define USB_NODE DT_NODELABEL(usb0)
 #define USB_CONFIG_LENGTH (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN)
@@ -56,23 +56,45 @@ static const char *const strings[] = {
     "USB CDC",
 };
 
-uint8_t const *tud_descriptor_device_cb(void)
-{
-    return (const uint8_t *)&device_descriptor;
-}
+    /**
+     * @brief TinyUSB 设备描述符回调，返回设备描述符数据
+     *
+     * @return 设备描述符数据指针
+    */
+    extern "C" uint8_t const *tud_descriptor_device_cb(void)
+    {
+        return (const uint8_t *)&device_descriptor;
+    }
 
-uint8_t const *tud_descriptor_device_qualifier_cb(void)
-{
-    return (const uint8_t *)&qualifier_descriptor;
-}
+    /**
+     * @brief TinyUSB 设备限定符描述符回调
+     *
+     * @return 限定符描述符数据指针
+    */
+    extern "C" uint8_t const *tud_descriptor_device_qualifier_cb(void)
+    {
+        return (const uint8_t *)&qualifier_descriptor;
+    }
 
-uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
+    /**
+     * @brief TinyUSB 配置描述符回调，按当前速度返回对应配置
+     *
+     * @param index 配置索引
+     * @return 高速或全速配置描述符数据指针
+    */
+    extern "C" uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 {
     (void)index;
     return tud_speed_get() == TUSB_SPEED_HIGH ? high_speed_configuration : full_speed_configuration;
 }
 
-uint8_t const *tud_descriptor_other_speed_configuration_cb(uint8_t index)
+    /**
+     * @brief TinyUSB 其它速度配置描述符回调
+     *
+     * @param index 配置索引
+     * @return 其它速度配置描述符数据指针
+    */
+    extern "C" uint8_t const *tud_descriptor_other_speed_configuration_cb(uint8_t index)
 {
     (void)index;
     memcpy(other_speed_configuration, tud_speed_get() == TUSB_SPEED_HIGH ? full_speed_configuration : high_speed_configuration, sizeof(other_speed_configuration));
@@ -80,12 +102,19 @@ uint8_t const *tud_descriptor_other_speed_configuration_cb(uint8_t index)
     return other_speed_configuration;
 }
 
-uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
+    /**
+     * @brief TinyUSB 字符串描述符回调，返回指定索引的字符串
+     *
+     * @param index 字符串索引
+     * @param langid 语言 ID
+     * @return 字符串描述符数据指针
+    */
+    extern "C" uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 {
     (void)langid;
-    if (index == 0U) {
-        string_descriptor[1] = 0x0409U;
-        string_descriptor[0] = (TUSB_DESC_STRING << 8U) | 4U;
+    if (index == 0) {
+        string_descriptor[1] = 0x0409;
+        string_descriptor[0] = (TUSB_DESC_STRING << 8) | 4;
         return string_descriptor;
     }
     if (index >= sizeof(strings) / sizeof(strings[0])) {
@@ -94,24 +123,34 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
     const char *text = strings[index];
     size_t count = strlen(text);
-    if (count > 31U) {
-        count = 31U;
+    if (count > 31) {
+        count = 31;
     }
     for (size_t i = 0; i < count; ++i) {
-        string_descriptor[i + 1U] = (uint8_t)text[i];
+        string_descriptor[i + 1] = (uint8_t)text[i];
     }
-    string_descriptor[0] = (TUSB_DESC_STRING << 8U) | (uint16_t)(2U * count + 2U);
+    string_descriptor[0] = (TUSB_DESC_STRING << 8) | (uint16_t)(2 * count + 2);
     return string_descriptor;
 }
 
-static void usb_irq(const void *arg)
-{
-    (void)arg;
-    tusb_int_handler(0, true);
-    k_sem_give(&usb_event_sem);
-}
+    /**
+     * @brief USB 中断处理函数，驱动 TinyUSB 并唤醒事件信号量
+     *
+     * @param arg 中断参数
+    */
+    static void usb_irq(const void *arg)
+    {
+        (void)arg;
+        tusb_int_handler(0, true);
+        k_sem_give(&usb_event_sem);
+    }
 
-int bsp_usb_init(void)
+    /**
+     * @brief 初始化 USB 外设与 TinyUSB 栈
+     *
+     * @return 成功返回 0，失败返回负错误码
+    */
+    int bsp_usb_init(void)
 {
     if (k_is_in_isr()) {
         return -EWOULDBLOCK;
@@ -136,22 +175,38 @@ int bsp_usb_init(void)
     return 0;
 }
 
-void bsp_usb_task(void)
-{
-    if (ready) {
-        tud_task();
+    /**
+     * @brief USB 任务处理，供主循环轮询 TinyUSB
+     *
+    */
+    void bsp_usb_task(void)
+    {
+        if (ready) {
+            tud_task();
+        }
     }
-}
 
-void bsp_usb_wait_event(k_timeout_t timeout)
-{
-    if (!ready) {
-        return;
+    /**
+     * @brief 等待 USB 中断事件，可通过超时退出
+     *
+     * @param timeout 等待超时
+    */
+    void bsp_usb_wait_event(k_timeout_t timeout)
+    {
+        if (!ready) {
+            return;
+        }
+        k_sem_take(&usb_event_sem, timeout);
     }
-    k_sem_take(&usb_event_sem, timeout);
-}
 
-int bsp_usb_receive(void *data, size_t length)
+    /**
+     * @brief 从 USB CDC 接收数据
+     *
+     * @param data 接收缓冲区
+     * @param length 期望接收的字节数
+     * @return 实际接收字节数，失败返回负错误码
+    */
+    int bsp_usb_receive(void *data, size_t length)
 {
     if (k_is_in_isr()) {
         return -EWOULDBLOCK;
@@ -159,19 +214,26 @@ int bsp_usb_receive(void *data, size_t length)
     if (!ready) {
         return -ENODEV;
     }
-    if (data == NULL && length != 0U) {
+    if (data == NULL && length != 0) {
         return -EINVAL;
     }
     if (length > INT_MAX) {
         return -EMSGSIZE;
     }
-    if (length == 0U) {
+    if (length == 0) {
         return 0;
     }
     return (int)tud_cdc_read(data, (uint32_t)length);
 }
 
-int bsp_usb_transmit(const void *data, size_t length)
+    /**
+     * @brief 通过 USB CDC 发送数据
+     *
+     * @param data 待发送缓冲区
+     * @param length 待发送的字节数
+     * @return 实际发送字节数，失败返回负错误码
+    */
+    int bsp_usb_transmit(const void *data, size_t length)
 {
     if (k_is_in_isr()) {
         return -EWOULDBLOCK;
@@ -179,13 +241,13 @@ int bsp_usb_transmit(const void *data, size_t length)
     if (!ready) {
         return -ENODEV;
     }
-    if (data == NULL && length != 0U) {
+    if (data == NULL && length != 0) {
         return -EINVAL;
     }
     if (length > INT_MAX) {
         return -EMSGSIZE;
     }
-    if (length == 0U) {
+    if (length == 0) {
         return 0;
     }
     if (!bsp_usb_connected()) {
@@ -193,13 +255,18 @@ int bsp_usb_transmit(const void *data, size_t length)
     }
 
     const uint32_t count = tud_cdc_write(data, (uint32_t)length);
-    if (count > 0U) {
+    if (count > 0) {
         (void)tud_cdc_write_flush();
     }
-    return count > 0U ? (int)count : -ENOBUFS;
+    return count > 0 ? (int)count : -ENOBUFS;
 }
 
-bool bsp_usb_connected(void)
-{
-    return ready && tud_cdc_ready();
-}
+    /**
+     * @brief 查询 USB CDC 是否已连接就绪
+     *
+     * @return 已连接返回 true，否则返回 false
+    */
+    bool bsp_usb_connected(void)
+    {
+        return ready && tud_cdc_ready();
+    }

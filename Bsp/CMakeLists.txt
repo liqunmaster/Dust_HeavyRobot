@@ -5,7 +5,7 @@ target_sources(app PRIVATE
     bsp_gpio.c
     bsp_pwm.cpp
     bsp_uart.cpp
-    bsp_usb.c
+    bsp_usb.cpp
 )
 target_include_directories(app PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 

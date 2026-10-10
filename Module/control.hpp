@@ -2,6 +2,7 @@
 
 #include "pid.hpp"
 
+// 单级速度环（封装一个 PID 速度控制器）
 class SpeedLoop
 {
     public:
@@ -13,6 +14,7 @@ class SpeedLoop
     alg::Pid pid_{};
 };
 
+// 位置-速度串级控制环（内层 PID 为速度环）
 class PositionSpeedLoop
 {
     public:

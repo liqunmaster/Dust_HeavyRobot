@@ -4,6 +4,7 @@
 
 #include "bsp_pwm.hpp"
 
+// WS2812B 灯珠颜色结构体，RGB 各 8 位
 struct ws2812b_color
 {
     uint8_t red;
