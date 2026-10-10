@@ -12,8 +12,8 @@
 #include "dji_motor.hpp"
 #include "type_math.hpp"
 
-// C620 电机 ID 枚举，对应标准帧反馈 ID（0x201~0x208）
-enum C620_ID
+// C620 电机 ID 枚举 对应标准帧反馈 ID
+enum c620_id
 {
     C620_ID_0x201 = 1,
     C620_ID_0x202 = 2,
@@ -26,7 +26,7 @@ enum C620_ID
 };
 
 // C620 原始反馈数据解包结构体
-struct C620RxData
+struct c620_rx_data
 {
     uint16_t encoder;
     int16_t omega;
@@ -35,8 +35,8 @@ struct C620RxData
     uint8_t error;
 } __attribute__((packed));
 
-// C620 处理后的数据结构体（角度、角速度、电流、温度等）
-struct C620Data
+// C620 处理后的数据结构体
+struct c620_data
 {
     float now_angle;
     float now_omega;
@@ -51,7 +51,7 @@ struct C620Data
 class c620
 {
     public:
-    int init(fdcan_device device, C620_ID id, float gear_ratio = 1.0f);
+    int init(fdcan_device device, c620_id id, float gear_ratio = 1.0f);
 
     int set_current(float current);
 
@@ -61,15 +61,15 @@ class c620
 
     uint32_t get_feedback_count() const;
 
-    C620RxData get_rx_data() const;
+    c620_rx_data get_rx_data() const;
 
-    C620Data get_data() const;
+    c620_data get_data() const;
 
     /**
      * @brief 获取绑定的 CAN 通道编号
      *
      * @return 通道编号
-    */
+     */
     fdcan_device device() const
     {
         return device_;
@@ -78,25 +78,25 @@ class c620
     /**
      * @brief 获取电机标准 ID 对应的编号
      *
-     * @return 电机编号（1~8）
-    */
+     * @return 电机编号
+     */
     uint8_t motor_id() const { return static_cast<uint8_t>(id_); }
 
     /**
      * @brief 获取反馈报文 ID
      *
      * @return 反馈报文 ID
-    */
+     */
     uint32_t feedback_id() const
     {
         return 0x200 + motor_id();
     }
 
     /**
-     * @brief 获取控制报文 ID（前 4 个用 0x200，后 4 个用 0x1FF）
+     * @brief 获取控制报文 ID
      *
      * @return 控制报文 ID
-    */
+     */
     uint32_t command_frame_id() const
     {
         return motor_id() <= 4 ? 0x200 : 0x1FF;
@@ -109,21 +109,21 @@ class c620
 
     static constexpr float current_limit_ = 20.0f;
 
-    static C620RxData decode_feedback(const uint8_t *data);
+    static c620_rx_data decode_feedback(const uint8_t *data);
 
     void unpack_feedback(const uint8_t *data);
 
     fdcan_device device_ = FDCAN_DEVICE_COUNT;
 
-    C620_ID id_ = C620_ID_0x201;
+    c620_id id_ = C620_ID_0x201;
 
     float gear_ratio_ = 1.0f;
 
     bool initialized_ = false;
 
-    C620RxData rx_data_{};
+    c620_rx_data rx_data_{};
 
-    C620Data data_{};
+    c620_data data_{};
 
     int64_t total_encoder_ = 0;
 

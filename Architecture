@@ -17,13 +17,13 @@
 
 ## 主要数据流
 
-- 遥控器：`Bsp` 接收 UART 数据，`Communication` 调用 `Module` 解析，解析结果经 `Topic` 提供给 `App`。
-- CAN 反馈：`Bsp` 接收帧，`Communication` 按总线和 ID 保存最新原始帧；读取反馈时由 `Device` 解码，再通过 `Topic` 提供给 `App`。
-- CAN 控制：`App` 使用 `Module` 计算目标，由 `Device` 组帧；周期控制帧经 `Topic` 交给 `Communication` 调度，最后由 `Bsp` 发送。配置、使能和恢复命令可直接调用 `Communication` 接口。
+- 遥控器：`Bsp` 接收 UART 数据 `Communication` 调用 `Module` 解析 解析结果经 `Topic` 提供给 `App`。
+- CAN 反馈：`Bsp` 接收帧 `Communication` 按总线和 ID 保存最新原始帧；读取反馈时由 `Device` 解码 再通过 `Topic` 提供给 `App`。
+- CAN 控制：`App` 使用 `Module` 计算目标 由 `Device` 组帧；周期控制帧经 `Topic` 交给 `Communication` 调度 最后由 `Bsp` 发送。配置、使能和恢复命令可直接调用 `Communication` 接口。
 - IMU：`Communication` 从 `Device` 读取采样并调用 `Module` 更新姿态估计。
-- 健康监测：`main` 周期调用 `Health_Monitor`，后者查询电机状态，并通过 `Communication` 发送必要的恢复命令。
+- 健康监测：`main` 周期调用 `Health_Monitor` 后者查询电机状态 并通过 `Communication` 发送必要的恢复命令。
 
 ## 实时控制约束
 
-- CAN 周期控制使用最新值槽；尚未发送的旧控制值可被新值覆盖。发送失败或完成失败后丢弃旧帧，不延后重发。
+- CAN 周期控制使用最新值槽；尚未发送的旧控制值可被新值覆盖。发送失败或完成失败后丢弃旧帧 不延后重发。
 - 达妙电机不得与使用 CAN ID `0x000`、且采用“发一帧、回一帧”通信方式的设备挂在同一条 CAN 总线上。

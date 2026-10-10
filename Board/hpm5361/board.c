@@ -9,9 +9,9 @@
 #include <hpm_soc.h>
 
     /**
-     * @brief 初始化板级 CPU 时钟，配置 PLL0 频率与 CPU 分频
+     * @brief 初始化板级 CPU 时钟 配置 PLL0 频率与 CPU 分频
      *
-     * @return 成功返回 0，配置失败返回 -EIO
+     * @return 成功返回 0 配置失败返回 -EIO
     */
     static int hpm5361_board_clock_init(void)
 {
@@ -49,9 +49,9 @@ const uint32_t hpm5361_nor_cfg_option[4] = {
 }
 
     /**
-     * @brief 执行软件复位，触发 POR 复位并进入死循环等待
+     * @brief 执行软件复位 触发 POR 复位并进入死循环等待
      *
-     * @param type 复位类型（未使用）
+     * @param type 复位类型
     */
     void sys_arch_reboot(int type)
 {

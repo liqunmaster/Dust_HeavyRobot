@@ -11,8 +11,8 @@
 #include "pid.hpp"
 
 
-// 发射机（推弹器）的工作状态枚举
-enum class BoosterState : uint8_t
+// 发射机 的工作状态枚举
+enum class booster_state : uint8_t
 {
     disabled,
     ready,
@@ -24,9 +24,9 @@ enum class BoosterState : uint8_t
 };
 
 // 发射机状态信息结构体
-struct BoosterStatus
+struct booster_status
 {
-    BoosterState state;
+    booster_state state;
     bool feedback_fresh;
     uint8_t motor_status;
     uint32_t feedback_age_ms;
@@ -41,4 +41,4 @@ struct BoosterStatus
 
 void app_booster_init();
 
-void app_booster_get_status(BoosterStatus &status);
+void app_booster_get_status(booster_status &status);

@@ -13,9 +13,9 @@ class cpu_usage final
 {
     public:
     /**
-     * @brief 对采样到的 CPU 占用率做低通滤波，并映射为红绿颜色显示到 WS2812B
+     * @brief 对采样到的 CPU 占用率做低通滤波 并映射为红绿颜色显示到 WS2812B
      *
-    */
+     */
     void display_on_ws2812b()
     {
         float percent = 0.0f;
@@ -43,11 +43,11 @@ class cpu_usage final
     }
 
     /**
-     * @brief 采样当前 CPU 负载率（千分比换算为百分比）
+     * @brief 采样当前 CPU 负载率
      *
      * @param percent 输出 CPU 占用百分比
-     * @return 成功返回 0；数据不足返回 -EAGAIN，否则返回负错误码
-    */
+     * @return 成功返回 0；数据不足返回 -EAGAIN 否则返回负错误码
+     */
     int sample(float &percent)
     {
         const int permille = cpu_load_get(true);
@@ -66,7 +66,7 @@ class cpu_usage final
 /**
  * @brief CPU 占用监控巡检入口：按采样间隔定期刷新灯带显示
  *
-*/
+ */
 inline void cpu_usage_supervisor()
 {
     static cpu_usage usage;

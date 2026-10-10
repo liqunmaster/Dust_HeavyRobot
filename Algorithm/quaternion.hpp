@@ -21,7 +21,7 @@ namespace alg::attitude
     };
 
     // 基于四元数扩展卡尔曼滤波的姿态估计器
-    class QuaternionEkf final
+    class quaternion_ekf final
     {
         public:
         // 姿态估计器的参数配置
@@ -73,11 +73,11 @@ namespace alg::attitude
          * @brief 获取姿态估计的运行状态
          *
          * @return 状态结构体引用
-        */
+         */
         const State &get_state() const { return state_; }
 
         private:
-        using EKF = alg::filter::ExtendedKalman<6, 3, 4>;
+        using EKF = alg::filter::extended_kalman<6, 3, 4>;
 
         static void system_func(const EKF::State &state, const EKF::Ctrl &control, EKF::State &predicted, EKF::Cov &jacobian);
 

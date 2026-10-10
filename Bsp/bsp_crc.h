@@ -14,8 +14,9 @@
 #ifdef __cplusplus
 extern "C"
 {
-    #endif
-        uint32_t bsp_crc_calculate(const uint8_t *data, size_t length, uint32_t initial, uint32_t polynomial, uint32_t width, bool reflected);
-    #ifdef __cplusplus
+#endif
+    uint32_t bsp_crc_calculate(const uint8_t *data, size_t length, uint32_t initial, uint32_t polynomial, uint32_t width, bool reflected);
+#ifdef __cplusplus
 }
 #endif
+

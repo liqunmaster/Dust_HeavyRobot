@@ -7,11 +7,11 @@ namespace alg
 {
 
     /**
-     * @brief 初始化最小二乘回归，清空采样数据
+     * @brief 初始化最小二乘回归 清空采样数据
      *
-     * @param order 回归阶数（拟合点数，上限 kMaxOrder）
-    */
-    void LeastSquares::init(uint16_t order)
+     * @param order 回归阶数
+     */
+    void least_squares::init(uint16_t order)
     {
         Order = order > kMaxOrder ? kMaxOrder : order;
         Count = 0;
@@ -27,8 +27,8 @@ namespace alg
      *
      * @param deltax 相邻采样点的横坐标间隔
      * @param y_sample 新采样点的纵坐标值
-    */
-    void LeastSquares::shift_and_append(float deltax, float y_sample)
+     */
+    void least_squares::shift_and_append(float deltax, float y_sample)
     {
         if (Order == 0 || !std::isfinite(deltax) || !std::isfinite(y_sample)) {
             return;
@@ -56,11 +56,11 @@ namespace alg
     }
 
     /**
-     * @brief 使用当前数据窗拟合直线 y = kx + b，并计算平均绝对标准差
+     * @brief 使用当前数据窗拟合直线 y = kx + b 并计算平均绝对标准差
      *
-     * @return 拟合是否成功（数据不足或分母退化时返回 false）
-    */
-    bool LeastSquares::fit()
+     * @return 拟合是否成功
+     */
+    bool least_squares::fit()
     {
         if (Count < 2 || Order < 2) {
             k = 0.0f;
@@ -102,34 +102,34 @@ namespace alg
      *
      * @param deltax 相邻采样点的横坐标间隔
      * @param y_sample 新采样点的纵坐标值
-    */
-    void LeastSquares::add(float deltax, float y_sample)
+     */
+    void least_squares::add(float deltax, float y_sample)
     {
         shift_and_append(deltax, y_sample);
         fit();
     }
 
     /**
-     * @brief 加入采样点并返回当前拟合直线的斜率（导数）
+     * @brief 加入采样点并返回当前拟合直线的斜率
      *
      * @param deltax 相邻采样点的横坐标间隔
      * @param y_sample 新采样点的纵坐标值
      * @return 拟合斜率 k
-    */
-    float LeastSquares::derivative(float deltax, float y_sample)
+     */
+    float least_squares::derivative(float deltax, float y_sample)
     {
         add(deltax, y_sample);
         return k;
     }
 
     /**
-     * @brief 加入采样点并返回最新拟合点（平滑值）
+     * @brief 加入采样点并返回最新拟合点
      *
      * @param deltax 相邻采样点的横坐标间隔
      * @param y_sample 新采样点的纵坐标值
      * @return 最新拟合平滑值
-    */
-    float LeastSquares::smooth(float deltax, float y_sample)
+     */
+    float least_squares::smooth(float deltax, float y_sample)
     {
         add(deltax, y_sample);
         return last_smooth();
@@ -139,8 +139,8 @@ namespace alg
      * @brief 获取最新拟合点的平滑值
      *
      * @return 最新拟合平滑值
-    */
-    float LeastSquares::last_smooth() const noexcept
+     */
+    float least_squares::last_smooth() const noexcept
     {
         if (Count == 0) {
             return 0.0f;
@@ -154,8 +154,8 @@ namespace alg
      *
      * @param least_squares 目标对象指针
      * @param order 回归阶数
-    */
-    void OLS_Init(LeastSquares *least_squares, uint16_t order)
+     */
+    void OLS_Init(least_squares *least_squares, uint16_t order)
     {
         if (least_squares != nullptr) {
             least_squares->init(order);
@@ -168,8 +168,8 @@ namespace alg
      * @param least_squares 目标对象指针
      * @param deltax 相邻采样点的横坐标间隔
      * @param y 新采样点的纵坐标值
-    */
-    void OLS_Update(LeastSquares *least_squares, float deltax, float y)
+     */
+    void OLS_Update(least_squares *least_squares, float deltax, float y)
     {
         if (least_squares != nullptr) {
             least_squares->update(deltax, y);
@@ -183,8 +183,8 @@ namespace alg
      * @param deltax 相邻采样点的横坐标间隔
      * @param y 新采样点的纵坐标值
      * @return 拟合斜率 k
-    */
-    float OLS_Derivative(LeastSquares *least_squares, float deltax, float y)
+     */
+    float OLS_Derivative(least_squares *least_squares, float deltax, float y)
     {
         return least_squares != nullptr ? least_squares->derivative(deltax, y) : 0.0f;
     }
@@ -196,8 +196,8 @@ namespace alg
      * @param deltax 相邻采样点的横坐标间隔
      * @param y 新采样点的纵坐标值
      * @return 最新拟合平滑值
-    */
-    float OLS_Smooth(LeastSquares *least_squares, float deltax, float y)
+     */
+    float OLS_Smooth(least_squares *least_squares, float deltax, float y)
     {
         return least_squares != nullptr ? least_squares->smooth(deltax, y) : 0.0f;
     }
@@ -207,8 +207,8 @@ namespace alg
      *
      * @param least_squares 目标对象指针
      * @return 拟合斜率 k
-    */
-    float Get_OLS_Derivative(const LeastSquares *least_squares)
+     */
+    float Get_OLS_Derivative(const least_squares *least_squares)
     {
         return least_squares != nullptr ? least_squares->last_derivative() : 0.0f;
     }
@@ -218,8 +218,8 @@ namespace alg
      *
      * @param least_squares 目标对象指针
      * @return 最新拟合平滑值
-    */
-    float Get_OLS_Smooth(const LeastSquares *least_squares)
+     */
+    float Get_OLS_Smooth(const least_squares *least_squares)
     {
         return least_squares != nullptr ? least_squares->last_smooth() : 0.0f;
     }

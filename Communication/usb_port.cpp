@@ -12,9 +12,9 @@ namespace
     bool ready;
 
     /**
-     * @brief 从 USB 底层读取数据并写入环形缓冲区，统计收包与丢包数量
+     * @brief 从 USB 底层读取数据并写入环形缓冲区 统计收包与丢包数量
      *
-    */
+     */
     void usb_port_process()
     {
         uint8_t bytes[128];
@@ -31,7 +31,7 @@ namespace
     /**
      * @brief USB 接收线程入口：周期性等待事件、驱动底层并处理接收数据
      *
-    */
+     */
     void usb_thread_entry(void *, void *, void *)
     {
         while (1) {
@@ -44,7 +44,7 @@ namespace
 /**
  * @brief 初始化 USB 端口并启动接收线程；已初始化或在中断上下文则直接返回
  *
-*/
+ */
 void usb_port_init()
 {
     if (k_is_in_isr()) {
@@ -68,8 +68,8 @@ void usb_port_init()
  *
  * @param data   目标缓冲区；长度为 0 时可为空
  * @param length 期望读取的字节数
- * @return 实际读取的字节数；未就绪返回 -ENODEV，中断上下文返回 -EWOULDBLOCK
-*/
+ * @return 实际读取的字节数；未就绪返回 -ENODEV 中断上下文返回 -EWOULDBLOCK
+ */
 int usb_port_receive(void *data, size_t length)
 {
     if (k_is_in_isr()) {
@@ -99,8 +99,8 @@ int usb_port_receive(void *data, size_t length)
  *
  * @param data   待发送的数据
  * @param length 发送的字节数
- * @return 底层发送接口的返回值，0 表示成功
-*/
+ * @return 底层发送接口的返回值 0 表示成功
+ */
 int usb_port_transmit(const void *data, size_t length)
 {
     return bsp_usb_transmit(data, length);
@@ -109,8 +109,8 @@ int usb_port_transmit(const void *data, size_t length)
 /**
  * @brief 查询 USB 是否处于连接状态
  *
- * @return 已连接返回 true，否则返回 false
-*/
+ * @return 已连接返回 true 否则返回 false
+ */
 bool usb_port_connected()
 {
     return bsp_usb_connected();
@@ -120,7 +120,7 @@ bool usb_port_connected()
  * @brief 获取累计成功接收的字节数
  *
  * @return 累计接收字节数
-*/
+ */
 uint32_t usb_port_received_count()
 {
     return static_cast<uint32_t>(atomic_get(&received_count));
@@ -130,7 +130,7 @@ uint32_t usb_port_received_count()
  * @brief 获取由于缓冲区溢出而丢弃的字节数
  *
  * @return 累计丢弃字节数
-*/
+ */
 uint32_t usb_port_dropped_count()
 {
     return static_cast<uint32_t>(atomic_get(&dropped_count));

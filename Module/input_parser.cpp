@@ -1,9 +1,9 @@
 #include "input_parser.hpp"
 
 /**
- * @brief 复位解析器，清空缓冲与帧状态
+ * @brief 复位解析器 清空缓冲与帧状态
  *
-*/
+ */
 void input_stream_parser::reset()
 {
     length_ = 0;
@@ -16,7 +16,7 @@ void input_stream_parser::reset()
  * @brief 从缓冲区头部丢弃指定数量字节并回到帧头状态
  *
  * @param count 需要丢弃的字节数
-*/
+ */
 void input_stream_parser::consume(size_t count)
 {
     if (count >= length_) {
@@ -31,12 +31,12 @@ void input_stream_parser::consume(size_t count)
 }
 
 /**
- * @brief 尝试从缓冲区解码完整帧，成功则调用回调
+ * @brief 尝试从缓冲区解码完整帧 成功则调用回调
  *
- * @param timestamp_ms 数据的时间戳（毫秒）
+ * @param timestamp_ms 数据的时间戳
  * @param callback 解码成功后的回调函数
  * @param context 传给回调函数的上下文
-*/
+ */
 void input_stream_parser::try_decode(uint32_t timestamp_ms, sample_callback callback, void *context)
 {
     while (length_ != 0) {
@@ -118,10 +118,10 @@ void input_stream_parser::try_decode(uint32_t timestamp_ms, sample_callback call
  *
  * @param data 输入字节数组
  * @param length 输入数据长度
- * @param timestamp_ms 数据的时间戳（毫秒）
+ * @param timestamp_ms 数据的时间戳
  * @param callback 解码成功后的回调函数
  * @param context 传给回调函数的上下文
-*/
+ */
 void input_stream_parser::feed(const uint8_t *data, size_t length, uint32_t timestamp_ms, sample_callback callback, void *context)
 {
     if (data == nullptr || callback == nullptr) {

@@ -13,7 +13,7 @@
 
 #define SPI_BUFFER_SIZE 64
 
-// SPI 实例结构体，封装设备句柄、配置、互斥锁与收发环形缓冲
+// SPI 实例结构体 封装设备句柄、配置、互斥锁与收发环形缓冲
 struct spi
 {
     const struct device *device;
@@ -35,3 +35,4 @@ int bsp_spi_read(spi *spi, uint8_t *data, size_t length);
 int bsp_spi_transceive(spi *spi, const uint8_t *tx_data, uint8_t *rx_data, size_t length);
 
 void bsp_spi_clear_buffers(spi *spi);
+

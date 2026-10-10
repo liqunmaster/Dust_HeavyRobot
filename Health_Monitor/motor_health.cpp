@@ -29,13 +29,13 @@ namespace
      * @brief 依据电机类型、反馈时间与状态字段分类判断电机健康状态
      *
      * @param motor         电机健康数据
-     * @param now_ms        当前系统时间（毫秒）
-     * @param last_feedback 最近一次有效反馈时间（毫秒）
+     * @param now_ms        当前系统时间
+     * @param last_feedback 最近一次有效反馈时间
      * @return 对应的电机健康状态
-    */
-    motor_state classify_state(const FdcanMotorHealthData &motor, uint32_t now_ms, uint32_t last_feedback)
+     */
+    motor_state classify_state(const fdcan_motor_health_data &motor, uint32_t now_ms, uint32_t last_feedback)
     {
-        if (motor.kind == FdcanMotorKind::cubemars) {
+        if (motor.kind == fdcan_motor_kind::cubemars) {
             if (!motor.enable_acknowledged || now_ms - last_feedback >= CUBEMARS_FEEDBACK_TIMEOUT_MS) {
                 return motor_state::offline;
             }
@@ -44,7 +44,7 @@ namespace
         if (now_ms - last_feedback >= MOTOR_OFFLINE_TIMEOUT_MS) {
             return motor_state::offline;
         }
-        if (motor.kind == FdcanMotorKind::dm) {
+        if (motor.kind == fdcan_motor_kind::dm) {
             if (motor.status == dm_status_enabled) {
                 return motor_state::enabled;
             }
@@ -54,16 +54,16 @@ namespace
     }
 
     /**
-     * @brief 周期巡检所有电机，更新健康状态并触发离线自动恢复
+     * @brief 周期巡检所有电机 更新健康状态并触发离线自动恢复
      *
-     * @param now_ms     当前系统时间（毫秒）
-     * @param elapsed_ms 距上次巡检的间隔时间（毫秒）
-    */
+     * @param now_ms     当前系统时间
+     * @param elapsed_ms 距上次巡检的间隔时间
+     */
     void check_motors(uint32_t now_ms, uint32_t elapsed_ms)
     {
         // CAN interrupts use the interrupted thread's stack on this target.
         // Keep the 32-motor snapshot off the 2 KB main thread stack.
-        static FdcanMotorHealthData motors[FDCAN_PORT_MAX_MOTORS];
+        static fdcan_motor_health_data motors[FDCAN_PORT_MAX_MOTORS];
         static bool present[FDCAN_PORT_MAX_MOTORS];
         const size_t motor_count = fdcan_port_motor_count();
         for (size_t index = 0; index < motor_count; ++index) {
@@ -77,10 +77,10 @@ namespace
             if (!registered[index]) {
                 registered[index] = true;
                 last_count[index] = count;
-                if (motors[index].kind == FdcanMotorKind::cubemars) {
+                if (motors[index].kind == fdcan_motor_kind::cubemars) {
                     atomic_set(&offline[index], 1);
                 }
-                last_feedback_ms[index] = motors[index].kind == FdcanMotorKind::cubemars ? (motors[index].request_count != 0 && count == 0 ? motors[index].pending_since_ms : now_ms) : now_ms - MOTOR_OFFLINE_TIMEOUT_MS;
+                last_feedback_ms[index] = motors[index].kind == fdcan_motor_kind::cubemars ? (motors[index].request_count != 0 && count == 0 ? motors[index].pending_since_ms : now_ms) : now_ms - MOTOR_OFFLINE_TIMEOUT_MS;
             } else if (count != last_count[index]) {
                 last_count[index] = count;
                 last_feedback_ms[index] = now_ms;
@@ -93,7 +93,7 @@ namespace
             }
             const bool is_offline = next == motor_state::offline;
             if (atomic_set(&offline[index], is_offline ? 1 : 0) != (is_offline ? 1 : 0) &&
-                motors[index].kind == FdcanMotorKind::cubemars) {
+            motors[index].kind == fdcan_motor_kind::cubemars) {
                 fdcan_port_set_motor_offline(index, is_offline);
             }
         }
@@ -102,12 +102,12 @@ namespace
             if (!present[index] || !motors[index].automatic_recovery || states[index] == motor_state::enabled || recovery_ticks[index] != 0) {
                 continue;
             }
-            const FdcanMotorHealthData &motor = motors[index];
-            if (motor.kind == FdcanMotorKind::c610 || motor.kind == FdcanMotorKind::c620) {
+            const fdcan_motor_health_data &motor = motors[index];
+            if (motor.kind == fdcan_motor_kind::c610 || motor.kind == fdcan_motor_kind::c620) {
                 continue;
             }
-            if (motor.kind == FdcanMotorKind::cubemars &&
-                now_ms - last_feedback_ms[index] < CUBEMARS_FEEDBACK_TIMEOUT_MS) {
+            if (motor.kind == fdcan_motor_kind::cubemars &&
+            now_ms - last_feedback_ms[index] < CUBEMARS_FEEDBACK_TIMEOUT_MS) {
                 continue;
             }
             const bool clear_error = states[index] == motor_state::error;
@@ -116,23 +116,23 @@ namespace
                 continue;
             }
             (void)fdcan_port_send_once(motor.bus, frame);
-            recovery_ticks[index] = motor.kind == FdcanMotorKind::cubemars ? CUBEMARS_RECOVERY_PERIOD_MS : MOTOR_RECOVERY_PERIOD_MS;
+            recovery_ticks[index] = motor.kind == fdcan_motor_kind::cubemars ? CUBEMARS_RECOVERY_PERIOD_MS : MOTOR_RECOVERY_PERIOD_MS;
         }
 
         for (size_t index = 0; index < motor_count; ++index) {
             if (present[index] && states[index] != motor_state::enabled &&
-                recovery_ticks[index] != 0) {
+            recovery_ticks[index] != 0) {
                 recovery_ticks[index] = recovery_ticks[index] > elapsed_ms
-                    ? static_cast<uint16_t>(recovery_ticks[index] - elapsed_ms) : 0;
+                ? static_cast<uint16_t>(recovery_ticks[index] - elapsed_ms) : 0;
             }
         }
     }
 }
 
 /**
- * @brief 初始化电机健康监控模块（由 fdcan_port 初始化作为前置）
+ * @brief 初始化电机健康监控模块
  *
-*/
+ */
 void motor_health_init()
 {
     if (initialized) {
@@ -149,9 +149,9 @@ void motor_health_init()
 }
 
 /**
- * @brief 轮询电机健康，按固定周期执行巡检并触发自动恢复
+ * @brief 轮询电机健康 按固定周期执行巡检并触发自动恢复
  *
-*/
+ */
 void motor_health_poll()
 {
     if (!initialized) {
@@ -171,8 +171,8 @@ void motor_health_poll()
  * @brief 查询指定下标电机当前是否为离线状态
  *
  * @param index 电机表下标
- * @return 离线返回 true，否则返回 false
-*/
+ * @return 离线返回 true 否则返回 false
+ */
 bool motor_health_is_offline(size_t index)
 {
     return index < FDCAN_PORT_MAX_MOTORS && atomic_get(&offline[index]) != 0;

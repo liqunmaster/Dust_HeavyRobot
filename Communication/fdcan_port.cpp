@@ -14,7 +14,7 @@ namespace
     constexpr size_t standard_id_count = 0x800;
     constexpr uint32_t tx_timeout_ms = 5;
 
-    // 支持的电机类型：C610/C620（大疆）、DM、Cubemars
+    // 支持的电机类型：C610/C620 DM Cubemars
     enum class motor_kind : uint8_t
     {
         c610,
@@ -23,7 +23,7 @@ namespace
         cubemars
     };
 
-    // 一条中转待进的接收项，携带总线、数据帧与时间戳
+    // 一条中转待进的接收项 携带总线、数据帧与时间戳
     struct rx_item
     {
         fdcan_device bus;
@@ -31,7 +31,7 @@ namespace
         uint32_t timestamp_ms;
     };
 
-    // 原始反馈缓冲项，保存最近一次接收到的数据与代数（用于检测更新）
+    // 原始反馈缓冲项 保存最近一次接收到的数据与代数
     struct raw_feedback
     {
         uint8_t data[8];
@@ -47,7 +47,7 @@ namespace
         uint32_t id;
     };
 
-    // 一台已绑定电机的描述表项，含类型、总线、反馈 ID、收发统计与离线状态
+    // 一台已绑定电机的描述表项 含类型、总线、反馈 ID、收发统计与离线状态
     struct motor_entry
     {
         bool used;
@@ -67,7 +67,7 @@ namespace
         bool automatic_recovery;
     };
 
-    // 周期发送帧槽位，用于存放控制回路反复下发的帧
+    // 周期发送帧槽位 用于存放控制回路反复下发的帧
     struct periodic_entry
     {
         bool used;
@@ -78,7 +78,7 @@ namespace
         uint32_t generation;
     };
 
-    // 管理帧槽位，用于下发一次性的命令帧（如模式切换、使能等）
+    // 管理帧槽位 用于下发一次性的命令帧
     struct admin_entry
     {
         bool used;
@@ -89,7 +89,7 @@ namespace
         uint32_t generation;
     };
 
-    // 正在硬件发送中的帧描述，用于发送完成或超时后的回收
+    // 正在硬件发送中的帧描述 用于发送完成或超时后的回收
     struct inflight_frame
     {
         bool used;
@@ -135,11 +135,11 @@ namespace
     bool bus_registered[FDCAN_DEVICE_COUNT]{};
 
     /**
-     * @brief 判断给定帧是否为 Cubemars 电机使能帧（标准 ID 0x01，数据全 0xFF 且末字节 0xFC）
+     * @brief 判断给定帧是否为 Cubemars 电机使能帧
      *
      * @param frame 待判断的 CAN 帧
-     * @return 是使能帧返回 true，否则返回 false
-    */
+     * @return 是使能帧返回 true 否则返回 false
+     */
     bool cube_enable_frame(const fdcan_frame &frame)
     {
         if (frame.id_type != FDCAN_ID_STANDARD || frame.id != 0x01 ||
@@ -155,11 +155,11 @@ namespace
     }
 
     /**
-     * @brief 记录一次 Cubemars 请求帧已发送，并标记未确认时开启无响应计时
+     * @brief 记录一次 Cubemars 请求帧已发送 并标记未确认时开启无响应计时
      *
      * @param bus   请求所在的总线
      * @param frame 已发送的 Cubemars 请求帧
-    */
+     */
     void mark_cube_request_sent(fdcan_device bus, const fdcan_frame &frame)
     {
         const uint32_t now_ms = k_uptime_get_32();
@@ -181,10 +181,10 @@ namespace
     }
 
     /**
-     * @brief 收到来自 Cubemars 电机的响应时更新回复计数，并确认使能已被接受
+     * @brief 收到来自 Cubemars 电机的响应时更新回复计数 并确认使能已被接受
      *
      * @param motor 对应 Cubemars 电机对象指针
-    */
+     */
     void mark_cube_response(void *motor)
     {
         const uint32_t now_ms = k_uptime_get_32();
@@ -210,8 +210,8 @@ namespace
      * @brief 判断总线号是否在合法范围内
      *
      * @param bus 待判断的总线
-     * @return 合法返回 true，否则返回 false
-    */
+     * @return 合法返回 true 否则返回 false
+     */
     bool valid_bus(fdcan_device bus)
     {
         return bus >= FDCAN_DEVICE_CAN0 && bus < FDCAN_DEVICE_COUNT;
@@ -221,8 +221,8 @@ namespace
      * @brief 判断 CAN 帧的 ID 类型、协议类型与长度是否合法
      *
      * @param frame 待校验的 CAN 帧
-     * @return 合法返回 true，否则返回 false
-    */
+     * @return 合法返回 true 否则返回 false
+     */
     bool valid_frame(const fdcan_frame &frame)
     {
         if (frame.id_type == FDCAN_ID_STANDARD && frame.id > 0x7FF) {
@@ -241,15 +241,14 @@ namespace
     }
 
     /**
-     * @brief 判断总线上 Cubemars 电机的控制帧是否应被阻止（电机处于离线或使能未确认）
+     * @brief 判断总线上 Cubemars 电机的控制帧是否应被阻止
      *
      * @param control 控制话题数据
-     * @return 应阻止返回 true，否则返回 false
-    */
-    bool cube_control_blocked(const FdcanControlTopicData &control)
+     * @return 应阻止返回 true 否则返回 false
+     */
+    bool cube_control_blocked(const fdcan_control_topic_data &control)
     {
-        if (control.frame.id_type != FDCAN_ID_STANDARD || control.frame.id != 0x01 ||
-            control.frame.protocol != FDCAN_PROTOCOL_CLASSIC) {
+        if (control.frame.id_type != FDCAN_ID_STANDARD || control.frame.id != 0x01 || control.frame.protocol != FDCAN_PROTOCOL_CLASSIC) {
             return false;
         }
         const k_spinlock_key_t key = k_spin_lock(&motor_lock);
@@ -269,8 +268,8 @@ namespace
      *
      * @param bus   接收到的总线
      * @param frame 接收到的 CAN 帧视图
-     * @param       回调上下文，未使用
-    */
+     * @param       回调上下文 未使用
+     */
     void rx_callback(fdcan_device bus, const fdcan_rx_view *frame, void *)
     {
         if (!valid_bus(bus) || frame == nullptr || frame->id_type != FDCAN_ID_STANDARD ||
@@ -326,8 +325,8 @@ namespace
     /**
      * @brief 周期定时器回调：置位滴答标志并唤醒发送线程
      *
-     * @param 定时器对象，未使用
-    */
+     * @param 定时器对象 未使用
+     */
     void timer_callback(struct k_timer *)
     {
         if (atomic_get(&ready_bus_mask) == 0) {
@@ -338,12 +337,12 @@ namespace
     }
 
     /**
-     * @brief 发送完成回调：按结果更新错误计数与发送结果，并唤醒发送线程
+     * @brief 发送完成回调：按结果更新错误计数与发送结果 并唤醒发送线程
      *
      * @param bus   发送完成的总线
-     * @param error 发送错误码，0 表示成功
-     * @param       回调上下文，未使用
-    */
+     * @param error 发送错误码 0 表示成功
+     * @param       回调上下文 未使用
+     */
     void tx_callback(fdcan_device bus, int error, void *)
     {
         if (error != 0) {
@@ -358,18 +357,18 @@ namespace
      * @brief 控制话题接收回调：将控制帧提交到周期发送队列
      *
      * @param control 接收到的控制话题数据
-     * @return 提交结果，0 表示成功
-    */
-    int topic_control_sink(const FdcanControlTopicData &control)
+     * @return 提交结果 0 表示成功
+     */
+    int topic_control_sink(const fdcan_control_topic_data &control)
     {
         return fdcan_port_submit(control.bus, control.frame);
     }
 
     /**
-     * @brief 把接收到的项分发给匹配电机并解析反馈，随后发布反馈话题
+     * @brief 把接收到的项分发给匹配电机并解析反馈 随后发布反馈话题
      *
-     * @param item 待分发的接收项（含总线、帧与时间戳）
-    */
+     * @param item 待分发的接收项
+     */
     void dispatch(const rx_item &item)
     {
         if (item.frame.id_type != FDCAN_ID_STANDARD || item.frame.length < 6) {
@@ -396,7 +395,7 @@ namespace
         if (motor == nullptr) {
             return;
         }
-        FdcanFeedbackTopicData feedback{};
+        fdcan_feedback_topic_data feedback{};
         feedback.bus = item.bus;
         feedback.id = item.frame.id;
         feedback.timestamp_ms = item.timestamp_ms;
@@ -405,8 +404,8 @@ namespace
             case motor_kind::c610:
                 result = static_cast<c610 *>(motor)->process_feedback(item.frame);
                 if (result == 0) {
-                    const C610Data data = static_cast<c610 *>(motor)->get_data();
-                    feedback.kind = FdcanMotorKind::c610;
+                    const c610_data data = static_cast<c610 *>(motor)->get_data();
+                    feedback.kind = fdcan_motor_kind::c610;
                     feedback.speed_rad_s = data.now_omega;
                     feedback.angle_rad = data.now_angle;
                     feedback.current_a = data.now_current;
@@ -416,8 +415,8 @@ namespace
             case motor_kind::c620:
                 result = static_cast<c620 *>(motor)->process_feedback(item.frame);
                 if (result == 0) {
-                    const C620Data data = static_cast<c620 *>(motor)->get_data();
-                    feedback.kind = FdcanMotorKind::c620;
+                    const c620_data data = static_cast<c620 *>(motor)->get_data();
+                    feedback.kind = fdcan_motor_kind::c620;
                     feedback.speed_rad_s = data.now_omega;
                     feedback.angle_rad = data.now_angle;
                     feedback.current_a = data.now_current;
@@ -427,8 +426,8 @@ namespace
             case motor_kind::dm:
                 result = static_cast<dm_motor *>(motor)->process_feedback(item.frame);
                 if (result == 0) {
-                    const DmData data = static_cast<dm_motor *>(motor)->get_data();
-                    feedback.kind = FdcanMotorKind::dm;
+                    const dm_data data = static_cast<dm_motor *>(motor)->get_data();
+                    feedback.kind = fdcan_motor_kind::dm;
                     feedback.speed_rad_s = data.now_omega;
                     feedback.angle_rad = data.now_angle;
                     feedback.torque_nm = data.now_torque;
@@ -438,8 +437,8 @@ namespace
             case motor_kind::cubemars:
                 result = static_cast<cubemars *>(motor)->process_feedback(item.frame);
                 if (result == 0) {
-                    const CubemarsData data = static_cast<cubemars *>(motor)->get_data();
-                    feedback.kind = FdcanMotorKind::cubemars;
+                    const cubemars_data data = static_cast<cubemars *>(motor)->get_data();
+                    feedback.kind = fdcan_motor_kind::cubemars;
                     feedback.speed_rad_s = data.now_omega;
                     feedback.angle_rad = data.now_total_angle;
                     feedback.torque_nm = data.now_torque;
@@ -456,13 +455,13 @@ namespace
     }
 
     /**
-     * @brief 在持有解码锁的前提下，将某电机的最新原始反馈刷新为解析结果并发布
+     * @brief 在持有解码锁的前提下 将某电机的最新原始反馈刷新为解析结果并发布
      *
      * @param bus  反馈所在的总线
      * @param id   反馈帧 ID
      * @param kind 电机类型
-    */
-    void refresh_feedback_locked(fdcan_device bus, uint32_t id, FdcanMotorKind kind)
+     */
+    void refresh_feedback_locked(fdcan_device bus, uint32_t id, fdcan_motor_kind kind)
     {
         size_t slot = max_motors;
         const k_spinlock_key_t motor_key = k_spin_lock(&motor_lock);
@@ -505,8 +504,8 @@ namespace
      * @param bus  反馈所在的总线
      * @param id   反馈帧 ID
      * @param kind 电机类型
-    */
-    void refresh_feedback(fdcan_device bus, uint32_t id, FdcanMotorKind kind)
+     */
+    void refresh_feedback(fdcan_device bus, uint32_t id, fdcan_motor_kind kind)
     {
         k_mutex_lock(&feedback_decode_lock, K_FOREVER);
         refresh_feedback_locked(bus, id, kind);
@@ -518,8 +517,8 @@ namespace
      *
      * @param keys  待刷新的电机键数组
      * @param count 数组元素个数
-    */
-    void refresh_feedback_batch(const FdcanFeedbackKey *keys, size_t count)
+     */
+    void refresh_feedback_batch(const fdcan_feedback_key *keys, size_t count)
     {
         k_mutex_lock(&feedback_decode_lock, K_FOREVER);
         for (size_t index = 0; index < count; ++index) {
@@ -532,9 +531,9 @@ namespace
      * @brief 将控制帧登记进周期发送槽位；被阻止的控制帧会被停发
      *
      * @param control 控制话题数据
-     * @return 成功返回 0，无空闲槽位返回 -ENOSPC
-    */
-    int stage_control(const FdcanControlTopicData &control)
+     * @return 成功返回 0 无空闲槽位返回 -ENOSPC
+     */
+    int stage_control(const fdcan_control_topic_data &control)
     {
         if (cube_control_blocked(control)) {
             const k_spinlock_key_t key = k_spin_lock(&tx_lock);
@@ -560,9 +559,7 @@ namespace
                 if (free_slot == nullptr) {
                     free_slot = &entry;
                 }
-            } else if (entry.bus == control.bus && entry.frame.id == control.frame.id &&
-                       entry.frame.id_type == control.frame.id_type &&
-                       entry.frame.protocol == control.frame.protocol) {
+            } else if (entry.bus == control.bus && entry.frame.id == control.frame.id && entry.frame.id_type == control.frame.id_type && entry.frame.protocol == control.frame.protocol) {
                 slot = &entry;
                 break;
             } else if (!entry.pending && idle_slot == nullptr) {
@@ -588,13 +585,13 @@ namespace
     }
 
     /**
-     * @brief 查找某个总线上可用的管理帧槽位（优先匹配已存在的目标帧）
+     * @brief 查找某个总线上可用的管理帧槽位
      *
      * @param bus    目标总线
      * @param frame  待登记的管理帧
      * @param target 目标电机 ID
      * @return 找到的槽位指针；找不到返回 nullptr
-    */
+     */
     admin_entry *find_admin_slot(fdcan_device bus, const fdcan_frame &frame, uint8_t target)
     {
         admin_entry *free_slot = nullptr;
@@ -620,7 +617,7 @@ namespace
      * @param bus    目标总线
      * @param frame  待登记的管理帧
      * @param target 目标电机 ID
-    */
+     */
     void stage_admin(admin_entry &entry, fdcan_device bus, const fdcan_frame &frame, uint8_t target)
     {
         entry.used = true;
@@ -633,10 +630,10 @@ namespace
     }
 
     /**
-     * @brief 处理某总线当前帧发送完成，清除对应槽位的挂起状态
+     * @brief 处理某总线当前帧发送完成 清除对应槽位的挂起状态
      *
      * @param bus 发送完成的总线
-    */
+     */
     void complete_tx(fdcan_device bus)
     {
         const int result = atomic_set(&tx_result[bus], 0);
@@ -663,13 +660,13 @@ namespace
     }
 
     /**
-     * @brief 丢弃指定槽位中待发送的帧（发送失败时清理）
+     * @brief 丢弃指定槽位中待发送的帧
      *
      * @param bus        目标总线
      * @param admin      是否为管理帧
      * @param slot       槽位索引
-     * @param generation 帧代数，用于避免误删新帧
-    */
+     * @param generation 帧代数 用于避免误删新帧
+     */
     void discard_selected(fdcan_device bus, bool admin, size_t slot, uint32_t generation)
     {
         const k_spinlock_key_t key = k_spin_lock(&tx_lock);
@@ -697,8 +694,8 @@ namespace
      * @param frame      输出选中的帧
      * @param slot       输出槽位索引
      * @param generation 输出帧代数
-     * @return 选中到管理帧返回 true，否则返回 false
-    */
+     * @return 选中到管理帧返回 true 否则返回 false
+     */
     bool select_admin(fdcan_device bus, fdcan_frame &frame, size_t &slot, uint32_t &generation)
     {
         const k_spinlock_key_t key = k_spin_lock(&tx_lock);
@@ -718,10 +715,10 @@ namespace
     }
 
     /**
-     * @brief 尝试为某总线调度并发送下一帧（管理帧或周期帧）
+     * @brief 尝试为某总线调度并发送下一帧
      *
      * @param bus 目标总线
-    */
+     */
     void send_next(fdcan_device bus)
     {
         if (inflight[bus].used) {
@@ -811,7 +808,7 @@ namespace
     /**
      * @brief 巡检并恢复长时间未完成的硬件发送
      *
-    */
+     */
     void recover_stuck_tx()
     {
         const uint32_t now_ms = k_uptime_get_32();
@@ -832,9 +829,9 @@ namespace
     }
 
     /**
-     * @brief 遍历所有就绪总线，为每条总线调用发送下一帧
+     * @brief 遍历所有就绪总线 为每条总线调用发送下一帧
      *
-    */
+     */
     void send_ready()
     {
         const atomic_val_t ready = atomic_get(&ready_bus_mask);
@@ -849,7 +846,7 @@ namespace
     /**
      * @brief 发送线程入口：处理发送完成、超时巡检与就绪总线的帧发送
      *
-    */
+     */
     void thread_entry(void *, void *, void *)
     {
         while (1) {
@@ -869,17 +866,17 @@ namespace
     }
 
     /**
-     * @brief 将电机注册进电机表并建立接收路由，返回槽位索引
+     * @brief 将电机注册进电机表并建立接收路由 返回槽位索引
      *
      * @param kind              电机类型
      * @param motor             电机对象指针
      * @param bus               绑定总线
      * @param feedback_id       反馈帧 ID
      * @param protocol          通信协议
-     * @param motor_id          电机 ID（DM 电机使用）
+     * @param motor_id          电机 ID
      * @param automatic_recovery 是否启用离线自动恢复
-     * @return 成功返回 0，否则返回对应负错误码
-    */
+     * @return 成功返回 0 否则返回对应负错误码
+     */
     int bind_motor(motor_kind kind, void *motor, fdcan_device bus, uint32_t feedback_id,
                    fdcan_protocol protocol, uint8_t motor_id, bool automatic_recovery = true)
     {
@@ -947,7 +944,7 @@ namespace
      *
      * @param motor 电机对象指针
      * @return 累计反馈帧数量；未找到电机返回 0
-    */
+     */
     uint32_t received_count(const void *motor)
     {
         const k_spinlock_key_t key = k_spin_lock(&motor_lock);
@@ -964,10 +961,10 @@ namespace
 }
 
 /**
- * @brief 初始化 FDCAN 总线的发送/接收回调并启动发送线程（线程安全，仅初始化一次）
+ * @brief 初始化 FDCAN 总线的发送/接收回调并启动发送线程
  *
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_init()
 {
     if (atomic_get(&initialized) != 0) {
@@ -1021,12 +1018,12 @@ int fdcan_port_init()
 }
 
 /**
- * @brief 订阅一路未绑定电机的原始 CAN 数据（标准帧，数据长度不超过 8 字节）
+ * @brief 订阅一路未绑定电机的原始 CAN 数据
  *
  * @param bus 订阅所在的总线
  * @param id  订阅的 CAN 帧 ID
- * @return 成功返回 0；参数非法返回 -EINVAL，重复订阅返回 -EALREADY，槽位满返回 -ENOSPC
-*/
+ * @return 成功返回 0；参数非法返回 -EINVAL 重复订阅返回 -EALREADY 槽位满返回 -ENOSPC
+ */
 int fdcan_port_subscribe_raw(fdcan_device bus, uint32_t id)
 {
     if (!valid_bus(bus) || id >= standard_id_count) {
@@ -1064,9 +1061,9 @@ int fdcan_port_subscribe_raw(fdcan_device bus, uint32_t id)
  * @param bus      订阅所在的总线
  * @param id       订阅的 CAN 帧 ID
  * @param snapshot 输出最新帧快照
- * @return 成功返回 0；尚未收到数据返回 -ENODATA，未订阅返回 -ENOENT
-*/
-int fdcan_port_latest_raw(fdcan_device bus, uint32_t id, FdcanRawSnapshot &snapshot)
+ * @return 成功返回 0；尚未收到数据返回 -ENODATA 未订阅返回 -ENOENT
+ */
+int fdcan_port_latest_raw(fdcan_device bus, uint32_t id, fdcan_raw_snapshot &snapshot)
 {
     if (!valid_bus(bus) || id >= standard_id_count) {
         return -EINVAL;
@@ -1099,22 +1096,22 @@ int fdcan_port_latest_raw(fdcan_device bus, uint32_t id, FdcanRawSnapshot &snaps
 }
 
 /**
- * @brief 绑定一台 C610 电机（经典 CAN，标准帧）
+ * @brief 绑定一台 C610 电机
  *
  * @param motor C610 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_bind(c610 &motor)
 {
     return bind_motor(motor_kind::c610, &motor, motor.device(), motor.feedback_id(), FDCAN_PROTOCOL_CLASSIC, motor.motor_id());
 }
 
 /**
- * @brief 绑定一台 C620 电机（经典 CAN，标准帧）
+ * @brief 绑定一台 C620 电机
  *
  * @param motor C620 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_bind(c620 &motor)
 {
     return bind_motor(motor_kind::c620, &motor, motor.device(), motor.feedback_id(), FDCAN_PROTOCOL_CLASSIC, motor.motor_id());
@@ -1123,21 +1120,21 @@ int fdcan_port_bind(c620 &motor)
 /**
  * @brief 绑定一台 DM 电机
  *
- * @param motor               DM 电机对象引用
+ * @param motor DM 电机对象引用
  * @param automatic_recovery 是否启用离线自动恢复
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_bind(dm_motor &motor, bool automatic_recovery)
 {
     return bind_motor(motor_kind::dm, &motor, motor.device(), motor.feedback_id(), motor.feedback_protocol(), motor.motor_id(), automatic_recovery);
 }
 
 /**
- * @brief 绑定一台 Cubemars 电机（经典 CAN，标准帧）
+ * @brief 绑定一台 Cubemars 电机
  *
  * @param motor Cubemars 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_bind(cubemars &motor)
 {
     return bind_motor(motor_kind::cubemars, &motor, motor.device(), motor.feedback_id(), FDCAN_PROTOCOL_CLASSIC, 0);
@@ -1148,9 +1145,9 @@ int fdcan_port_bind(cubemars &motor)
  *
  * @param index 电机表下标
  * @param data  输出健康状态数据
- * @return 成功返回 0；下标越界返回 -EINVAL，未绑定返回 -ENOENT
-*/
-int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data)
+ * @return 成功返回 0；下标越界返回 -EINVAL 未绑定返回 -ENOENT
+ */
+int fdcan_port_motor_health(size_t index, fdcan_motor_health_data &data)
 {
     if (index >= max_motors) {
         return -EINVAL;
@@ -1162,7 +1159,7 @@ int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data)
         return -ENOENT;
     }
 
-    refresh_feedback(entry.bus, entry.feedback_id, static_cast<FdcanMotorKind>(entry.kind));
+    refresh_feedback(entry.bus, entry.feedback_id, static_cast<fdcan_motor_kind>(entry.kind));
     const k_spinlock_key_t updated_key = k_spin_lock(&motor_lock);
     entry = motors[index];
     k_spin_unlock(&motor_lock, updated_key);
@@ -1172,7 +1169,7 @@ int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data)
     switch (entry.kind) {
         case motor_kind::c610: {
             const auto &motor = *static_cast<c610 *>(entry.motor);
-            data.kind = FdcanMotorKind::c610;
+            data.kind = fdcan_motor_kind::c610;
             data.valid_feedback_count = motor.get_feedback_count();
             data.control_frame_id = motor.command_frame_id();
             data.status = 0;
@@ -1180,7 +1177,7 @@ int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data)
         }
         case motor_kind::c620: {
             const auto &motor = *static_cast<c620 *>(entry.motor);
-            data.kind = FdcanMotorKind::c620;
+            data.kind = fdcan_motor_kind::c620;
             data.valid_feedback_count = motor.get_feedback_count();
             data.control_frame_id = motor.command_frame_id();
             data.status = 0;
@@ -1188,7 +1185,7 @@ int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data)
         }
         case motor_kind::dm: {
             const auto &motor = *static_cast<dm_motor *>(entry.motor);
-            data.kind = FdcanMotorKind::dm;
+            data.kind = fdcan_motor_kind::dm;
             data.valid_feedback_count = motor.get_feedback_count();
             data.control_frame_id = motor.control_frame_id();
             data.status = motor.get_data().status;
@@ -1196,7 +1193,7 @@ int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data)
         }
         case motor_kind::cubemars: {
             const auto &motor = *static_cast<cubemars *>(entry.motor);
-            data.kind = FdcanMotorKind::cubemars;
+            data.kind = fdcan_motor_kind::cubemars;
             data.valid_feedback_count = motor.get_feedback_count();
             data.control_frame_id = motor.control_frame_id();
             data.status = 0;
@@ -1215,7 +1212,7 @@ int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data)
  * @brief 获取当前已绑定的电机数量
  *
  * @return 已绑定的电机数量
-*/
+ */
 size_t fdcan_port_motor_count()
 {
     const k_spinlock_key_t key = k_spin_lock(&motor_lock);
@@ -1225,11 +1222,11 @@ size_t fdcan_port_motor_count()
 }
 
 /**
- * @brief 设置某电机为离线/在线状态，并清理其周期控制帧、重置使能确认
+ * @brief 设置某电机为离线/在线状态 并清理其周期控制帧、重置使能确认
  *
  * @param index   电机表下标
- * @param offline 为 true 表示设置离线，为 false 表示恢复在线
-*/
+ * @param offline 为 true 表示设置离线 为 false 表示恢复在线
+ */
 void fdcan_port_set_motor_offline(size_t index, bool offline)
 {
     if (index >= max_motors) {
@@ -1264,25 +1261,25 @@ void fdcan_port_set_motor_offline(size_t index, bool offline)
 }
 
 /**
- * @brief 构建电机的离线帧（即不带清错标志的恢复帧）
+ * @brief 构建电机的离线帧
  *
  * @param index 电机表下标
  * @param frame 输出离线帧
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_build_offline_frame(size_t index, fdcan_frame &frame)
 {
     return fdcan_port_build_recovery_frame(index, false, frame);
 }
 
 /**
- * @brief 构建电机的恢复帧（使能帧，或按需生成清错帧）
+ * @brief 构建电机的恢复帧
  *
  * @param index       电机表下标
  * @param clear_error 是否生成清除错误帧
  * @param frame       输出恢复帧
- * @return 成功返回 0；C610/C620 不支持恢复返回 -ENOTSUP，否则返回对应错误码
-*/
+ * @return 成功返回 0；C610/C620 不支持恢复返回 -ENOTSUP 否则返回对应错误码
+ */
 int fdcan_port_build_recovery_frame(size_t index, bool clear_error, fdcan_frame &frame)
 {
     if (index >= max_motors) {
@@ -1311,8 +1308,8 @@ int fdcan_port_build_recovery_frame(size_t index, bool clear_error, fdcan_frame 
  *
  * @param index 电机表下标
  * @param frame 输出控制帧
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_build_control_frame(size_t index, fdcan_frame &frame)
 {
     if (index >= max_motors) {
@@ -1342,8 +1339,8 @@ int fdcan_port_build_control_frame(size_t index, fdcan_frame &frame)
  *
  * @param bus   目标总线
  * @param frame 待提交的控制帧
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_submit(fdcan_device bus, const fdcan_frame &frame)
 {
     if (!valid_bus(bus) || !valid_frame(frame)) {
@@ -1372,8 +1369,8 @@ int fdcan_port_submit(fdcan_device bus, const fdcan_frame &frame)
  * @brief 构建并提交 C610 电机的控制帧到其所在总线
  *
  * @param motor C610 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_submit(const c610 &motor)
 {
     fdcan_frame frame{};
@@ -1389,8 +1386,8 @@ int fdcan_port_submit(const c610 &motor)
  * @brief 构建并提交 C620 电机的控制帧到其所在总线
  *
  * @param motor C620 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_submit(const c620 &motor)
 {
     fdcan_frame frame{};
@@ -1406,8 +1403,8 @@ int fdcan_port_submit(const c620 &motor)
  * @brief 构建并提交 DM 电机的控制帧到其所在总线
  *
  * @param motor DM 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_submit(const dm_motor &motor)
 {
     fdcan_frame frame{};
@@ -1423,8 +1420,8 @@ int fdcan_port_submit(const dm_motor &motor)
  * @brief 构建并提交 Cubemars 电机的控制帧到其所在总线
  *
  * @param motor Cubemars 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_submit(const cubemars &motor)
 {
     fdcan_frame frame{};
@@ -1437,12 +1434,12 @@ int fdcan_port_submit(const cubemars &motor)
 }
 
 /**
- * @brief 通过管理帧通道立即发送一帧（不走周期发送队列）
+ * @brief 通过管理帧通道立即发送一帧
  *
  * @param bus   目标总线
  * @param frame 待发送的帧
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_send_once(fdcan_device bus, const fdcan_frame &frame)
 {
     if (!valid_bus(bus) || !valid_frame(frame)) {
@@ -1476,13 +1473,13 @@ int fdcan_port_send_once(fdcan_device bus, const fdcan_frame &frame)
 }
 
 /**
- * @brief 请求 DM 电机切换到指定控制模式，并停发旧模式的周期控制帧
+ * @brief 请求 DM 电机切换到指定控制模式 并停发旧模式的周期控制帧
  *
  * @param motor DM 电机对象引用
  * @param mode  目标控制模式
- * @return 成功返回 0，否则返回对应负错误码
-*/
-int fdcan_port_request_mode(dm_motor &motor, DmControlMode mode)
+ * @return 成功返回 0 否则返回对应负错误码
+ */
+int fdcan_port_request_mode(dm_motor &motor, dm_control_mode mode)
 {
     fdcan_frame frame{};
     int ret = motor.build_mode_frame(mode, frame);
@@ -1532,8 +1529,8 @@ int fdcan_port_request_mode(dm_motor &motor, DmControlMode mode)
  * @brief 通过管理帧通道使能 Cubemars 电机
  *
  * @param motor Cubemars 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_enable(const cubemars &motor)
 {
     fdcan_frame frame{};
@@ -1545,8 +1542,8 @@ int fdcan_port_enable(const cubemars &motor)
  * @brief 通过管理帧通道失能 Cubemars 电机
  *
  * @param motor Cubemars 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_disable(const cubemars &motor)
 {
     fdcan_frame frame{};
@@ -1558,8 +1555,8 @@ int fdcan_port_disable(const cubemars &motor)
  * @brief 通过管理帧通道让 Cubemars 电机保存当前零位
  *
  * @param motor Cubemars 电机对象引用
- * @return 成功返回 0，否则返回对应负错误码
-*/
+ * @return 成功返回 0 否则返回对应负错误码
+ */
 int fdcan_port_save_zero(const cubemars &motor)
 {
     fdcan_frame frame{};
@@ -1572,7 +1569,7 @@ int fdcan_port_save_zero(const cubemars &motor)
  *
  * @param motor C610 电机对象引用
  * @return 累计反馈帧数量
-*/
+ */
 uint32_t fdcan_port_received_count(const c610 &motor)
 {
     return received_count(&motor);
@@ -1583,7 +1580,7 @@ uint32_t fdcan_port_received_count(const c610 &motor)
  *
  * @param motor C620 电机对象引用
  * @return 累计反馈帧数量
-*/
+ */
 uint32_t fdcan_port_received_count(const c620 &motor)
 {
     return received_count(&motor);
@@ -1594,7 +1591,7 @@ uint32_t fdcan_port_received_count(const c620 &motor)
  *
  * @param motor DM 电机对象引用
  * @return 累计反馈帧数量
-*/
+ */
 uint32_t fdcan_port_received_count(const dm_motor &motor)
 {
     return received_count(&motor);
@@ -1605,7 +1602,7 @@ uint32_t fdcan_port_received_count(const dm_motor &motor)
  *
  * @param motor Cubemars 电机对象引用
  * @return 累计反馈帧数量
-*/
+ */
 uint32_t fdcan_port_received_count(const cubemars &motor)
 {
     return received_count(&motor);
@@ -1615,7 +1612,7 @@ uint32_t fdcan_port_received_count(const cubemars &motor)
  * @brief 获取接收过程中因路由缺失或覆盖而丢弃的帧总数
  *
  * @return 丢弃帧数量
-*/
+ */
 uint32_t fdcan_port_rx_dropped_count()
 {
     return static_cast<uint32_t>(atomic_get(&rx_dropped));
@@ -1625,7 +1622,7 @@ uint32_t fdcan_port_rx_dropped_count()
  * @brief 获取累计发生的发送错误次数
  *
  * @return 发送错误次数
-*/
+ */
 uint32_t fdcan_port_tx_error_count()
 {
     return static_cast<uint32_t>(atomic_get(&tx_errors));
@@ -1635,7 +1632,7 @@ uint32_t fdcan_port_tx_error_count()
  * @brief 获取因提交失败或阻塞而被丢弃的控制帧数量
  *
  * @return 丢弃的控制帧数量
-*/
+ */
 uint32_t fdcan_port_control_dropped_count()
 {
     return static_cast<uint32_t>(atomic_get(&control_send_dropped));

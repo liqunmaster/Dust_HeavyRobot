@@ -6,12 +6,12 @@ namespace alg
     namespace
     {
         /**
-         * @brief 若数值为正且有限则返回原值，否则返回备用值
+         * @brief 若数值为正且有限则返回原值 否则返回备用值
          *
          * @param value 待判断的数值
          * @param fallback 数值无效时的备用值
          * @return 有效值或备用值
-        */
+         */
         float positive_or(float value, float fallback)
         {
             return std::isfinite(value) && value > 0.0f ? value : fallback;
@@ -22,10 +22,10 @@ namespace alg
      * @brief 将数值限幅在正负 limit 之间
      *
      * @param value 输入值
-     * @param limit 限幅绝对值（小于等于 0 时不限幅）
+     * @param limit 限幅绝对值
      * @return 限幅后的值
-    */
-    float Pid::clamp_abs(float value, float limit)
+     */
+    float pid::clamp_abs(float value, float limit)
     {
         if (std::isfinite(limit) && limit > 0.0f) {
             value = std::clamp(value, -limit, limit);
@@ -34,12 +34,12 @@ namespace alg
     }
 
     /**
-     * @brief 将角度差折叠到 [-180°, 180°]（弧度制）
+     * @brief 将角度差折叠到 [-180°, 180°]
      *
-     * @param value 待折叠的角度（弧度）
-     * @return 折叠后的角度（弧度）
-    */
-    float Pid::wrap_angle(float value)
+     * @param value 待折叠的角度
+     * @return 折叠后的角度
+     */
+    float pid::wrap_angle(float value)
     {
         return std::remainder(value, 2.0f * 3.14159265358979323846f);
     }
@@ -48,8 +48,8 @@ namespace alg
      * @brief 配置 PID 参数并复位内部状态
      *
      * @param config 配置结构体
-    */
-    void Pid::configure(const PidConfig &config)
+     */
+    void pid::configure(const pid_config &config)
     {
         config_ = config;
         config_.dt = positive_or(config_.dt, 0.001f);
@@ -73,8 +73,8 @@ namespace alg
 
     /**
      * @brief 复位 PID 内部全部状态变量
-    */
-    void Pid::reset()
+     */
+    void pid::reset()
     {
         target_ = 0.0f;
         measurement_ = 0.0f;
@@ -88,15 +88,15 @@ namespace alg
     }
 
     /**
-     * @brief 执行一次 PID 核心计算（含死区、变积分、积分分离、微分滤波等）
+     * @brief 执行一次 PID 核心计算
      *
      * @param target 目标值
      * @param measurement 测量值
-     * @param dt 采样周期（秒）
-     * @param angle 是否为角度环（按角度差折叠计算误差）
+     * @param dt 采样周期
+     * @param angle 是否为角度环
      * @return PID 输出量
-    */
-    float Pid::calculate(float target, float measurement, float dt, bool angle)
+     */
+    float pid::calculate(float target, float measurement, float dt, bool angle)
     {
         if (!std::isfinite(target) || !std::isfinite(measurement)) {
             return output_;
@@ -136,7 +136,7 @@ namespace alg
 
         float d_raw = 0.0f;
         if (initialized_ && config_.kd != 0.0f) {
-            if (config_.derivative_on_measurement == DFirst::Enable) {
+            if (config_.derivative_on_measurement == d_first::Enable) {
                 d_raw = -config_.kd * (measurement - previous_measurement_) / dt;
             } else {
                 const float derivative_error = angle ? wrap_angle(error - previous_error_) : error - previous_error_;
@@ -170,57 +170,57 @@ namespace alg
     }
 
     /**
-     * @brief 使用配置默认采样周期执行一次 PID 更新（非角度环）
+     * @brief 使用配置默认采样周期执行一次 PID 更新
      *
      * @param target 目标值
      * @param measurement 测量值
      * @return PID 输出量
-    */
-    float Pid::update(float target, float measurement)
+     */
+    float pid::update(float target, float measurement)
     {
         return calculate(target, measurement, config_.dt, false);
     }
 
     /**
-     * @brief 使用指定采样周期执行一次 PID 更新（非角度环）
+     * @brief 使用指定采样周期执行一次 PID 更新
      *
      * @param target 目标值
      * @param measurement 测量值
-     * @param dt 采样周期（秒）
+     * @param dt 采样周期
      * @return PID 输出量
-    */
-    float Pid::update(float target, float measurement, float dt)
+     */
+    float pid::update(float target, float measurement, float dt)
     {
         return calculate(target, measurement, dt, false);
     }
 
     /**
-     * @brief 使用配置默认采样周期执行一次 PID 更新（角度环）
+     * @brief 使用配置默认采样周期执行一次 PID 更新
      *
      * @param target 目标角度
      * @param measurement 测量角度
      * @return PID 输出量
-    */
-    float Pid::update_angle(float target, float measurement)
+     */
+    float pid::update_angle(float target, float measurement)
     {
         return calculate(target, measurement, config_.dt, true);
     }
 
     /**
-     * @brief 使用指定采样周期执行一次 PID 更新（角度环）
+     * @brief 使用指定采样周期执行一次 PID 更新
      *
      * @param target 目标角度
      * @param measurement 测量角度
-     * @param dt 采样周期（秒）
+     * @param dt 采样周期
      * @return PID 输出量
-    */
-    float Pid::update_angle(float target, float measurement, float dt)
+     */
+    float pid::update_angle(float target, float measurement, float dt)
     {
         return calculate(target, measurement, dt, true);
     }
 
     /**
-     * @brief 一次性配置 PID 全部参数（兼容旧式初始化接口）
+     * @brief 一次性配置 PID 全部参数
      *
      * @param kp 比例系数
      * @param ki 积分系数
@@ -228,19 +228,19 @@ namespace alg
      * @param kf 前馈系数
      * @param integral_limit 积分限幅
      * @param output_limit 输出限幅
-     * @param dt 采样周期（秒）
+     * @param dt 采样周期
      * @param dead_zone 死区
      * @param variable_speed_a 变积分区间下限
      * @param variable_speed_b 变积分区间上限
      * @param integral_separation 积分分离阈值
      * @param derivative_on_measurement 微分作用于测量值的开关
      * @param derivative_filter_tau 微分滤波时间常数
-    */
-    void Pid::Init(float kp, float ki, float kd, float kf, float integral_limit, float output_limit,
+     */
+    void pid::Init(float kp, float ki, float kd, float kf, float integral_limit, float output_limit,
                    float dt, float dead_zone, float variable_speed_a, float variable_speed_b,
-                   float integral_separation, DFirst derivative_on_measurement, float derivative_filter_tau)
+                   float integral_separation, d_first derivative_on_measurement, float derivative_filter_tau)
     {
-        configure(PidConfig{kp, ki, kd, kf, integral_limit, output_limit, dt, dead_zone,
+        configure(pid_config{kp, ki, kd, kf, integral_limit, output_limit, dt, dead_zone,
                             variable_speed_a, variable_speed_b, integral_separation, derivative_on_measurement,
                             derivative_filter_tau});
     }
@@ -249,98 +249,98 @@ namespace alg
      * @brief 设置比例系数 kp
      *
      * @param kp 比例系数
-    */
-    void Pid::SetKp(float kp) { config_.kp = kp; }
+     */
+    void pid::SetKp(float kp) { config_.kp = kp; }
 
     /**
      * @brief 设置积分系数 ki
      *
      * @param ki 积分系数
-    */
-    void Pid::SetKi(float ki) { config_.ki = ki; }
+     */
+    void pid::SetKi(float ki) { config_.ki = ki; }
 
     /**
      * @brief 设置微分系数 kd
      *
      * @param kd 微分系数
-    */
-    void Pid::SetKd(float kd) { config_.kd = kd; }
+     */
+    void pid::SetKd(float kd) { config_.kd = kd; }
 
     /**
      * @brief 设置前馈系数 kf
      *
      * @param kf 前馈系数
-    */
-    void Pid::SetKf(float kf) { config_.kf = kf; }
+     */
+    void pid::SetKf(float kf) { config_.kf = kf; }
 
     /**
      * @brief 设置积分限幅
      *
      * @param limit 积分限幅绝对值
-    */
-    void Pid::SetIOutMax(float limit) { config_.integral_limit = std::fabs(limit); }
+     */
+    void pid::SetIOutMax(float limit) { config_.integral_limit = std::fabs(limit); }
 
     /**
      * @brief 设置输出限幅
      *
      * @param limit 输出限幅绝对值
-    */
-    void Pid::SetOutMax(float limit) { config_.output_limit = std::fabs(limit); }
+     */
+    void pid::SetOutMax(float limit) { config_.output_limit = std::fabs(limit); }
 
     /**
      * @brief 设置变积分的开关区间下限
      *
      * @param value 区间下限
-    */
-    void Pid::SetIVariableSpeedA(float value) { config_.variable_speed_a = std::max(0.0f, value); }
+     */
+    void pid::SetIVariableSpeedA(float value) { config_.variable_speed_a = std::max(0.0f, value); }
 
     /**
      * @brief 设置变积分的开关区间上限
      *
      * @param value 区间上限
-    */
-    void Pid::SetIVariableSpeedB(float value) { config_.variable_speed_b = std::max(0.0f, value); }
+     */
+    void pid::SetIVariableSpeedB(float value) { config_.variable_speed_b = std::max(0.0f, value); }
 
     /**
      * @brief 设置积分分离阈值
      *
      * @param value 分离阈值
-    */
-    void Pid::SetISeparateThreshold(float value) { config_.integral_separation = std::max(0.0f, value); }
+     */
+    void pid::SetISeparateThreshold(float value) { config_.integral_separation = std::max(0.0f, value); }
 
     /**
      * @brief 设置目标值
      *
      * @param target 目标值
-    */
-    void Pid::SetTarget(float target) { target_ = target; }
+     */
+    void pid::SetTarget(float target) { target_ = target; }
 
     /**
      * @brief 设置当前测量值
      *
      * @param measurement 测量值
-    */
-    void Pid::SetNow(float measurement) { measurement_ = measurement; }
+     */
+    void pid::SetNow(float measurement) { measurement_ = measurement; }
 
     /**
      * @brief 直接设置积分累计误差
      *
      * @param integral_error 积分误差值
-    */
-    void Pid::SetIntegralError(float integral_error) { integral_error_ = integral_error; }
+     */
+    void pid::SetIntegralError(float integral_error) { integral_error_ = integral_error; }
 
     /**
-     * @brief 使用已保存的目标与测量值执行一次默认周期 PID 更新（回调用）
-    */
-    void Pid::CalculatePeriodElapsedCallback()
+     * @brief 使用已保存的目标与测量值执行一次默认周期 PID 更新
+     */
+    void pid::CalculatePeriodElapsedCallback()
     {
         update(target_, measurement_);
     }
 
     /**
      * @brief 使用已保存的目标与测量值执行一次默认周期角度环 PID 更新
-    */
-    void Pid::CalculateAnglePid()
+     */
+    void pid::CalculateAnglePid()
     {
         update_angle(target_, measurement_);
     }

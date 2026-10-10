@@ -39,7 +39,7 @@ void app_liftup_init();
 void app_liftup_set_target(uint8_t can_index, float relative_angle_rad);
 
 // 抬升电机运行状态信息
-struct LiftMotorStatus
+struct lift_motor_status
 {
     bool feedback_fresh;
     uint32_t feedback_age_ms;
@@ -54,4 +54,4 @@ struct LiftMotorStatus
     uint32_t can_rx_dropped;
 };
 
-void app_liftup_get_status(uint8_t can_index, LiftMotorStatus &status);
+void app_liftup_get_status(uint8_t can_index, lift_motor_status &status);

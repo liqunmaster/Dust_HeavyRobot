@@ -1,14 +1,14 @@
 #include "remote_vt03.hpp"
 
-    /**
-     * @brief 解析 VT03 遥控器数据帧，校验帧头/CRC 并解出各通道数据
-     *
-     * @param frame 待解析的数据帧
-     * @param length 帧长度
-     * @param sample 输出的解析结果
-     * @return 成功返回 0，长度/帧头/CRC/数据越界返回对应负错误码
-    */
-    int vt03::decode_frame(const uint8_t *frame, size_t length, vt03_sample &sample)
+/**
+ * @brief 解析 VT03 遥控器数据帧 校验帧头/CRC 并解出各通道数据
+ *
+ * @param frame 待解析的数据帧
+ * @param length 帧长度
+ * @param sample 输出的解析结果
+ * @return 成功返回 0 长度/帧头/CRC/数据越界返回对应负错误码
+ */
+int vt03::decode_frame(const uint8_t *frame, size_t length, vt03_sample &sample)
 {
     if (frame == nullptr || length != frame_size) {
         return -EINVAL;

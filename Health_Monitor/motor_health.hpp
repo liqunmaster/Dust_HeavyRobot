@@ -21,3 +21,4 @@ void motor_health_init();
 void motor_health_poll();
 
 bool motor_health_is_offline(size_t index);
+

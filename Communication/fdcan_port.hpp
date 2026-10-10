@@ -18,18 +18,18 @@ class c620;
 
 constexpr size_t FDCAN_PORT_MAX_MOTORS = 32;
 
-// 一次原始 CAN 帧的快照，保存数据字节、帧长与时间戳
-struct FdcanRawSnapshot
+// 一次原始 CAN 帧的快照 保存数据字节、帧长与时间戳
+struct fdcan_raw_snapshot
 {
     uint8_t data[8];
     uint8_t length;
     uint32_t timestamp_ms;
 };
 
-// 单台电机在健康监控视角下的状态数据，用于判断在线/离线与自动恢复
-struct FdcanMotorHealthData
+// 单台电机在健康监控视角下的状态数据 用于判断在线/离线与自动恢复
+struct fdcan_motor_health_data
 {
-    FdcanMotorKind kind;
+    fdcan_motor_kind kind;
 
     fdcan_device bus;
 
@@ -55,7 +55,7 @@ struct FdcanMotorHealthData
 // Classic CAN, standard ID, payload up to eight bytes. Register during startup.
 int fdcan_port_subscribe_raw(fdcan_device bus, uint32_t id);
 
-int fdcan_port_latest_raw(fdcan_device bus, uint32_t id, FdcanRawSnapshot &snapshot);
+int fdcan_port_latest_raw(fdcan_device bus, uint32_t id, fdcan_raw_snapshot &snapshot);
 
 int fdcan_port_init();
 
@@ -67,7 +67,7 @@ int fdcan_port_bind(dm_motor &motor, bool automatic_recovery = true);
 
 int fdcan_port_bind(cubemars &motor);
 
-int fdcan_port_motor_health(size_t index, FdcanMotorHealthData &data);
+int fdcan_port_motor_health(size_t index, fdcan_motor_health_data &data);
 
 size_t fdcan_port_motor_count();
 
@@ -91,7 +91,7 @@ int fdcan_port_submit(const cubemars &motor);
 
 int fdcan_port_send_once(fdcan_device device, const fdcan_frame &frame);
 
-int fdcan_port_request_mode(dm_motor &motor, DmControlMode mode);
+int fdcan_port_request_mode(dm_motor &motor, dm_control_mode mode);
 
 int fdcan_port_enable(const cubemars &motor);
 

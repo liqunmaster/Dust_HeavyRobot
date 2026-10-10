@@ -7,8 +7,8 @@
 
 #include "bsp_fdcan.hpp"
 
-// CubeMars 电机反馈数据，解算后的角度/角速度/力矩
-struct CubemarsData
+// CubeMars 电机反馈数据 解算后的角度/角速度/力矩
+struct cubemars_data
 {
     float now_angle;
     float now_total_angle;
@@ -16,7 +16,7 @@ struct CubemarsData
     float now_torque;
 };
 
-// CubeMars 电机控制类，支持 MIT 模式指令打包与反馈解算
+// CubeMars 电机控制类 支持 MIT 模式指令打包与反馈解算
 class cubemars
 {
     public:
@@ -34,7 +34,7 @@ class cubemars
 
     int process_feedback(const fdcan_frame &frame);
 
-    CubemarsData get_data() const;
+    cubemars_data get_data() const;
 
     uint32_t get_feedback_count() const;
 
@@ -42,21 +42,21 @@ class cubemars
      * @brief 获取电机绑定的 FDCAN 通道
      *
      * @return FDCAN 通道枚举值
-    */
+     */
     fdcan_device device() const { return device_; }
 
     /**
      * @brief 获取反馈帧的标准 ID
      *
      * @return 固定的反馈 ID 0x00
-    */
+     */
     uint32_t feedback_id() const { return 0x00; }
 
     /**
      * @brief 获取控制帧的标准 ID
      *
      * @return 固定的控制 ID 0x01
-    */
+     */
     uint32_t control_frame_id() const { return 0x01; }
 
     static void pack_mit(float position, float velocity, float kp, float kd, float torque, uint8_t out[8], float position_max, float velocity_max, float kp_max, float kd_max, float torque_max);
@@ -97,7 +97,7 @@ class cubemars
 
     float last_raw_angle_ = 0.0f;
 
-    CubemarsData data_{};
+    cubemars_data data_{};
 
     mutable struct k_spinlock lock_{};
 

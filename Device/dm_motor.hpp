@@ -11,7 +11,7 @@
 #include "bsp_fdcan.hpp"
 
 // 达妙电机控制模式枚举
-enum DmControlMode
+enum dm_control_mode
 {
     MOTOR_DM_CONTROL_METHOD_NORMAL_MIT = 1,
     MOTOR_DM_CONTROL_METHOD_NORMAL_ANGLE_OMEGA = 2,
@@ -20,7 +20,7 @@ enum DmControlMode
 };
 
 // 达妙电机 MIT 模式的量程限制结构体
-struct DmMitLimits
+struct dm_mit_limits
 {
     float position;
     float velocity;
@@ -28,7 +28,7 @@ struct DmMitLimits
 };
 
 // 达妙电机原始反馈数据解包结构体
-struct DmRxData
+struct dm_rx_data
 {
     uint8_t motor_id;
     uint8_t status;
@@ -40,7 +40,7 @@ struct DmRxData
 };
 
 // 达妙电机处理后的数据结构体
-struct DmData
+struct dm_data
 {
     float now_angle;
     float now_omega;
@@ -50,12 +50,12 @@ struct DmData
     uint8_t status;
 };
 
-// 达妙（DM）系列无刷电机驱动类
+// 达妙系列无刷电机驱动类
 class dm_motor
 {
     public:
-    int init(fdcan_device device, uint8_t motor_id, DmControlMode mode, DmMitLimits limits,
-             fdcan_protocol protocol, uint16_t master_id = 0, uint16_t tx_id_base = 0);
+    int init(fdcan_device device, uint8_t motor_id, dm_control_mode mode, dm_mit_limits limits,
+    fdcan_protocol protocol, uint16_t master_id = 0, uint16_t tx_id_base = 0);
 
     int set_mit(float position, float velocity, float kp, float kd, float torque);
 
@@ -79,57 +79,57 @@ class dm_motor
 
     uint32_t get_feedback_count() const;
 
-    DmRxData get_rx_data() const;
+    dm_rx_data get_rx_data() const;
 
-    DmData get_data() const;
+    dm_data get_data() const;
 
-    DmControlMode get_mode() const;
+    dm_control_mode get_mode() const;
 
     /**
      * @brief 获取绑定的 CAN 通道编号
      *
      * @return 通道编号
-    */
+     */
     fdcan_device device() const { return device_; }
 
     /**
      * @brief 获取电机 ID
      *
      * @return 电机 ID
-    */
+     */
     uint8_t motor_id() const { return motor_id_; }
 
     /**
-     * @brief 获取反馈报文 ID（主机 ID）
+     * @brief 获取反馈报文 ID
      *
      * @return 反馈报文 ID
-    */
+     */
     uint32_t feedback_id() const { return master_id_; }
 
     /**
      * @brief 获取反馈报文使用的协议类型
      *
      * @return 协议类型
-    */
+     */
     fdcan_protocol feedback_protocol() const { return protocol_; }
 
     /**
      * @brief 获取控制报文 ID
      *
      * @return 控制报文 ID
-    */
+     */
     uint32_t control_frame_id() const;
 
     private:
-    friend int fdcan_port_request_mode(dm_motor &motor, DmControlMode mode);
+    friend int fdcan_port_request_mode(dm_motor &motor, dm_control_mode mode);
 
-    int build_mode_frame(DmControlMode mode, fdcan_frame &frame) const;
+    int build_mode_frame(dm_control_mode mode, fdcan_frame &frame) const;
 
-    int mark_mode_request(DmControlMode mode);
+    int mark_mode_request(dm_control_mode mode);
 
-    static bool valid_mode(DmControlMode mode);
+    static bool valid_mode(dm_control_mode mode);
 
-    static uint16_t control_id(uint16_t tx_id_base, DmControlMode mode);
+    static uint16_t control_id(uint16_t tx_id_base, dm_control_mode mode);
 
     static uint16_t encode(float value, float minimum, float maximum, uint16_t maximum_raw);
 
@@ -151,25 +151,25 @@ class dm_motor
 
     uint16_t tx_id_base_ = 0;
 
-    DmControlMode mode_ = DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT;
+    dm_control_mode mode_ = dm_control_mode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT;
 
     fdcan_protocol protocol_ = FDCAN_PROTOCOL_CLASSIC;
 
-    DmControlMode requested_mode_ = DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT;
+    dm_control_mode requested_mode_ = dm_control_mode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT;
 
     bool mode_change_pending_ = false;
 
     bool initialized_ = false;
 
-    DmMitLimits limits_{};
+    dm_mit_limits limits_{};
 
     uint8_t tx_data_[8]{};
 
     uint8_t tx_length_ = 0;
 
-    DmRxData rx_data_{};
+    dm_rx_data rx_data_{};
 
-    DmData data_{};
+    dm_data data_{};
 
     mutable struct k_spinlock lock_{};
 

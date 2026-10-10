@@ -6,8 +6,8 @@ namespace
 
     constexpr float gyro_lsb_per_dps = 16.4f;
 
-    alg::attitude::QuaternionEkf estimator{};
-    alg::attitude::QuaternionEkf::State estimator_state{};
+    alg::attitude::quaternion_ekf estimator{};
+    alg::attitude::quaternion_ekf::State estimator_state{};
 
     float axis_rotation[3][3] = {
         {1.0f, 0.0f, 0.0f},
@@ -27,8 +27,8 @@ namespace
      * @brief 判断 3x3 矩阵的所有元素是否有限
      *
      * @param matrix 待判断的 3x3 矩阵
-     * @return 全部元素有限返回 true，否则返回 false
-    */
+     * @return 全部元素有限返回 true 否则返回 false
+     */
     bool finite_matrix(const float matrix[3][3])
     {
         for (int row = 0; row < 3; ++row) {
@@ -46,18 +46,18 @@ namespace
      *
      * @param matrix 输入矩阵
      * @return 矩阵的行列式值
-    */
+     */
     float determinant(const float matrix[3][3])
     {
         return matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]) - matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0]) + matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]);
     }
 
     /**
-     * @brief 校验矩阵是否为合法的旋转矩阵（行单位正交）
+     * @brief 校验矩阵是否为合法的旋转矩阵
      *
      * @param matrix 待校验的 3x3 矩阵
-     * @return 合法旋转矩阵返回 true，否则返回 false
-    */
+     * @return 合法旋转矩阵返回 true 否则返回 false
+     */
     bool is_rotation_matrix(const float matrix[3][3])
     {
         for (int row = 0; row < 3; ++row) {
@@ -86,12 +86,12 @@ namespace
 }
 
 /**
- * @brief 初始化惯性导航模块，配置姿态估计器
+ * @brief 初始化惯性导航模块 配置姿态估计器
  *
-*/
+ */
 void ins_init()
 {
-    alg::attitude::QuaternionEkf::Config config{};
+    alg::attitude::quaternion_ekf::Config config{};
     config.qq = 0.1f;
     config.qb = 0.0001f;
     config.r = 0.02f;
@@ -119,9 +119,9 @@ void ins_init()
  * @param gx_raw 陀螺仪 X 轴原始值
  * @param gy_raw 陀螺仪 Y 轴原始值
  * @param gz_raw 陀螺仪 Z 轴原始值
- * @param dt_seconds 采样时间间隔（秒）
+ * @param dt_seconds 采样时间间隔
  * @return 姿态估计是否已初始化完成
-*/
+ */
 bool ins_process(int16_t ax_raw, int16_t ay_raw, int16_t az_raw, int16_t gx_raw, int16_t gy_raw, int16_t gz_raw, float dt_seconds)
 {
     if (!std::isfinite(dt_seconds) || dt_seconds <= 0.0f || dt_seconds > 0.1f) {
@@ -187,7 +187,7 @@ bool ins_process(int16_t ax_raw, int16_t ay_raw, int16_t az_raw, int16_t gx_raw,
  * @brief 设置传感器到机体坐标系的旋转矩阵
  *
  * @param rotation 待设置的 3x3 旋转矩阵
-*/
+ */
 void ins_set_axis_rotation(const float rotation[3][3])
 {
     if (rotation == nullptr || !finite_matrix(rotation)) {
@@ -218,7 +218,7 @@ void ins_set_axis_rotation(const float rotation[3][3])
 /**
  * @brief 重置传感器到机体的旋转矩阵为单位矩阵
  *
-*/
+ */
 void ins_reset_axis_rotation()
 {
     constexpr float identity[3][3] = {
@@ -233,11 +233,11 @@ void ins_reset_axis_rotation()
  * @brief 获取当前解算的欧拉角
  *
  * @param angles 用于接收欧拉角的输出参数
- * @return 获取成功返回 true，姿态未初始化返回 false
-*/
+ * @return 获取成功返回 true 姿态未初始化返回 false
+ */
 bool ins_get_euler_angles(ins_euler_angles &angles)
 {
-    alg::attitude::QuaternionEkf::State state;
+    alg::attitude::quaternion_ekf::State state;
     const k_spinlock_key_t key = k_spin_lock(&ins_lock);
     state = estimator_state;
     k_spin_unlock(&ins_lock, key);

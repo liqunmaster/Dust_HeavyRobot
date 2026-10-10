@@ -27,7 +27,7 @@ namespace
 
     bool has_sample[3]{};
 
-    // 样本存储回调的上下文（指向可用回调及其参数）
+    // 样本存储回调的上下文
     struct sample_sink
     {
         input_stream_parser::sample_callback callback;
@@ -38,8 +38,8 @@ namespace
      * @brief 根据遥控协议获取其在样本数组中的索引
      *
      * @param protocol 遥控协议
-     * @return 对应的索引，非法协议返回 -1
-    */
+     * @return 对应的索引 非法协议返回 -1
+     */
     int sample_index(remote_protocol protocol)
     {
         switch (protocol) {
@@ -58,8 +58,8 @@ namespace
      * @brief 存储解析到的采样并通知外部回调
      *
      * @param sample 解析到的遥控采样
-     * @param context 上下文指针（指向 sample_sink）
-    */
+     * @param context 上下文指针
+     */
     void store_sample(const input_sample &sample, void *context)
     {
         const int index = sample_index(sample.protocol);
@@ -79,12 +79,12 @@ namespace
 }
 
 /**
- * @brief 处理一串串口接收到的数据块，解析出遥控器采样
+ * @brief 处理一串串口接收到的数据块 解析出遥控器采样
  *
  * @param chunk 待处理的串口数据块
  * @param on_sample 解析到采样后调用的回调函数
  * @param context 传给回调函数的上下文指针
-*/
+ */
 void input_process_chunk(const remote_rx_chunk &chunk,
                          input_stream_parser::sample_callback on_sample, void *context)
 {
@@ -102,8 +102,8 @@ void input_process_chunk(const remote_rx_chunk &chunk,
 /**
  * @brief 使超时未完成的半帧数据失效并复位解析器
  *
- * @param now_ms 当前运行时间（毫秒）
-*/
+ * @param now_ms 当前运行时间
+ */
 void input_expire_partial_frames(uint32_t now_ms)
 {
     for (auto &stream : streams) {
@@ -119,8 +119,8 @@ void input_expire_partial_frames(uint32_t now_ms)
  *
  * @param protocol 目标遥控协议
  * @param sample 用于接收采样的输出参数
- * @return 0 表示获取成功，否则返回对应错误码
-*/
+ * @return 0 表示获取成功 否则返回对应错误码
+ */
 int input_get_sample(remote_protocol protocol, input_sample &sample)
 {
     const int index = sample_index(protocol);
@@ -145,7 +145,7 @@ int input_get_sample(remote_protocol protocol, input_sample &sample)
  * @brief 获取累计收到的采样帧数
  *
  * @return 累计收到的采样帧数
-*/
+ */
 uint32_t input_feedback_count()
 {
     return static_cast<uint32_t>(atomic_get(&feedback_count));

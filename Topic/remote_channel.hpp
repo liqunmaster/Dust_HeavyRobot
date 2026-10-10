@@ -24,7 +24,7 @@ struct input_sample;
 #define REMOTE_DT7_LIFT_SIGN 1.0f
 
 // 底盘速度指令主题数据
-struct ChassisVelocityTopicData
+struct chassis_velocity_topic_data
 {
     float vx_m_s;
     float vy_m_s;
@@ -33,7 +33,7 @@ struct ChassisVelocityTopicData
 };
 
 // 升降轴角度指令主题数据
-struct LiftAngleTopicData
+struct lift_angle_topic_data
 {
     float relative_angle_rad;
     uint32_t timestamp_ms;
@@ -45,11 +45,12 @@ int remote_channel_latest_input(RemoteTopicData &data);
 
 void remote_channel_publish_chassis(float vx_m_s, float vy_m_s, float yaw_rad_s);
 
-int remote_channel_latest_chassis(ChassisVelocityTopicData &data);
+int remote_channel_latest_chassis(chassis_velocity_topic_data &data);
 
 void remote_channel_publish_lift(uint8_t index, float relative_angle_rad);
 
-int remote_channel_latest_lift(uint8_t index, LiftAngleTopicData &data);
+int remote_channel_latest_lift(uint8_t index, lift_angle_topic_data &data);
 
 // Wait for a new remote sample. The topic itself remains latest-value based;
 // this event path prevents app threads from polling it every millisecond.
+

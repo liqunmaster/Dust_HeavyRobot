@@ -2,16 +2,15 @@
 
 namespace alg
 {
-
     namespace
     {
         /**
-         * @brief 若数值有限则返回原值，否则返回备用值
+         * @brief 若数值有限则返回原值 否则返回备用值
          *
          * @param value 待判断的数值
          * @param fallback 数值无效时的备用值
          * @return 有效值或备用值
-        */
+         */
         float finite_or(float value, float fallback)
         {
             return std::isfinite(value) ? value : fallback;
@@ -22,10 +21,10 @@ namespace alg
      * @brief 将数值限幅在正负 limit 之间
      *
      * @param value 输入值
-     * @param limit 限幅绝对值（小于等于 0 时不限幅）
+     * @param limit 限幅绝对值
      * @return 限幅后的值
-    */
-    float Adrc::clamp_abs(float value, float limit)
+     */
+    float adrc::clamp_abs(float value, float limit)
     {
         if (std::isfinite(limit) && limit > 0.0f) {
             return std::clamp(value, -limit, limit);
@@ -37,11 +36,11 @@ namespace alg
      * @brief 非线性误差函数 fal
      *
      * @param error 输入误差
-     * @param alpha 幂指数（0~1）
+     * @param alpha 幂指数
      * @param delta 线性区间宽度
      * @return fal 非线性输出
-    */
-    float Adrc::fal(float error, float alpha, float delta)
+     */
+    float adrc::fal(float error, float alpha, float delta)
     {
         const float magnitude = std::fabs(error);
         if (magnitude <= delta) {
@@ -51,11 +50,11 @@ namespace alg
     }
 
     /**
-     * @brief 配置 ADRC 参数并同步配置扩张状态观测器（ESO）
+     * @brief 配置 ADRC 参数并同步配置扩张状态观测器
      *
      * @param config 配置结构体
-    */
-    void Adrc::configure(const AdrcConfig &config)
+     */
+    void adrc::configure(const adrc_config &config)
     {
         config_ = config;
         config_.b0 = finite_or(config_.b0, 1.0f);
@@ -67,7 +66,7 @@ namespace alg
         config_.kp = finite_or(config_.kp, 0.0f);
         config_.kd = finite_or(config_.kd, 0.0f);
 
-        EsoConfig eso_config;
+        eso_config eso_config;
         eso_config.beta1 = config_.beta1;
         eso_config.beta2 = config_.beta2;
         eso_config.beta3 = config_.beta3;
@@ -84,8 +83,8 @@ namespace alg
      * @brief 复位跟踪状态、输出与 ESO 状态
      *
      * @param state 初始跟踪状态值
-    */
-    void Adrc::reset(float state)
+     */
+    void adrc::reset(float state)
     {
         tracking_state_ = finite_or(state, 0.0f);
         tracking_derivative_ = 0.0f;
@@ -99,10 +98,10 @@ namespace alg
      *
      * @param reference 给定参考值
      * @param measurement 被控量测量值
-     * @param dt 采样周期（秒）
+     * @param dt 采样周期
      * @return 控制输出量
-    */
-    float Adrc::update(float reference, float measurement, float dt)
+     */
+    float adrc::update(float reference, float measurement, float dt)
     {
         if (!std::isfinite(reference) || !std::isfinite(measurement) || !std::isfinite(dt) || dt <= 0.0f) {
             return output_;
@@ -116,8 +115,7 @@ namespace alg
         } else {
             const float tracking_error = tracking_state_ - reference;
             const float max_acceleration = config_.tracking_acceleration;
-            float acceleration = -config_.tracking_rate * tracking_error -
-                                 2.0f * std::sqrt(std::max(0.0f, config_.tracking_rate)) * tracking_derivative_;
+            float acceleration = -config_.tracking_rate * tracking_error - 2.0f * std::sqrt(std::max(0.0f, config_.tracking_rate)) * tracking_derivative_;
             if (max_acceleration > 0.0f) {
                 acceleration = clamp_abs(acceleration, max_acceleration);
             }

@@ -3,9 +3,9 @@
 namespace
 {
     /**
-     * @brief IMU 端口运行状态，保存最新样例与反馈计数
+     * @brief IMU 端口运行状态 保存最新样例与反馈计数
      *
-    */
+     */
     struct imu_state
     {
         struct k_spinlock lock;
@@ -28,7 +28,7 @@ namespace
      * @brief 在自旋锁保护下保存最新 IMU 采样
      *
      * @param sample 待保存的 IMU 样例
-    */
+     */
     void store_sample(const imu_sample &sample)
     {
         const k_spinlock_key_t key = k_spin_lock(&state.lock);
@@ -38,10 +38,10 @@ namespace
     }
 
     /**
-     * @brief 计算采样间隔并送入惯导解算（INS）
+     * @brief 计算采样间隔并送入惯导解算
      *
      * @param sample 待处理的 IMU 样例
-    */
+     */
     void process_sample(const imu_sample &sample)
     {
         const uint32_t now_cycles = k_cycle_get_32();
@@ -64,7 +64,7 @@ namespace
 /**
  * @brief IMU 读取线程入口：等待数据就绪、读取样例、保存并处理
  *
-*/
+ */
 void imu_thread_entry(void *, void *, void *)
 {
     while (true) {
@@ -84,7 +84,7 @@ void imu_thread_entry(void *, void *, void *)
 /**
  * @brief 初始化 IMU 设备并启动读取线程
  *
-*/
+ */
 void imu_port_init()
 {
     const int ret = imu_device.init();
@@ -99,8 +99,8 @@ void imu_port_init()
  * @brief 读取最新的 IMU 采样；尚无数据时返回错误
  *
  * @param sample 输出最新 IMU 样例
- * @return 成功返回 0，暂无数据返回 -ENODATA
-*/
+ * @return 成功返回 0 暂无数据返回 -ENODATA
+ */
 int imu_port_get_sample(imu_sample &sample)
 {
     const k_spinlock_key_t key = k_spin_lock(&state.lock);
@@ -117,7 +117,7 @@ int imu_port_get_sample(imu_sample &sample)
  * @brief 获取累计读取并保存的 IMU 样例数量
  *
  * @return 累计样例数量
-*/
+ */
 uint32_t imu_port_feedback_count()
 {
     return static_cast<uint32_t>(atomic_get(&state.feedback_count));

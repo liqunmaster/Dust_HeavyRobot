@@ -10,7 +10,7 @@ static const struct device *const pwm_device = DEVICE_DT_GET(PWM_NODE);
 static const struct device *const dma_device = DEVICE_DT_GET(DT_DMAS_CTLR_BY_NAME(PWM_NODE, ws2812b));
 
 static uint32_t dma_words[BSP_PWM_MAX_PULSES + BSP_PWM_RESET_PULSES]
-    __attribute__((section("AHB_SRAM"), aligned(4)));
+__attribute__((section("AHB_SRAM"), aligned(4)));
 static K_MUTEX_DEFINE(pwm_lock);
 static K_SEM_DEFINE(dma_done, 0, 1);
 static uint64_t clock_hz;
@@ -19,41 +19,41 @@ static uint32_t trigger_ticks;
 static uint32_t period_setting;
 static bool initialized;
 
-    /**
-     * @brief 将纳秒时间换算为 PWM 计数时钟周期
-     *
-     * @param ns 纳秒值
-     * @return 对应的周期计数
-    */
-    static uint32_t ns_to_ticks(uint32_t ns)
-    {
-        return (uint32_t)((clock_hz * ns + 500000000LL) / 1000000000LL);
-    }
+/**
+ * @brief 将纳秒时间换算为 PWM 计数时钟周期
+ *
+ * @param ns 纳秒值
+ * @return 对应的周期计数
+ */
+static uint32_t ns_to_ticks(uint32_t ns)
+{
+    return (uint32_t)((clock_hz * ns + 500000000LL) / 1000000000LL);
+}
 
-    /**
-     * @brief DMA 传输完成回调，释放发送完成信号量
-     *
-     * @param dev DMA 设备句柄
-     * @param user_data 用户数据
-     * @param channel DMA 通道
-     * @param status 传输状态
-    */
-    static void pwm_dma_callback(const struct device *dev, void *user_data, uint32_t channel, int status)
-    {
-        (void)dev;
-        (void)user_data;
-        (void)channel;
-        (void)status;
-        k_sem_give(&dma_done);
-    }
+/**
+ * @brief DMA 传输完成回调 释放发送完成信号量
+ *
+ * @param dev DMA 设备句柄
+ * @param user_data 用户数据
+ * @param channel DMA 通道
+ * @param status 传输状态
+ */
+static void pwm_dma_callback(const struct device *dev, void *user_data, uint32_t channel, int status)
+{
+    (void)dev;
+    (void)user_data;
+    (void)channel;
+    (void)status;
+    k_sem_give(&dma_done);
+}
 
-    /**
-     * @brief 初始化 PWM 波形输出，配置周期并启动硬件
-     *
-     * @param period_ns 输出周期（纳秒）
-     * @return 成功返回 0，失败返回负错误码
-    */
-    int bsp_pwm_init(uint32_t period_ns)
+/**
+ * @brief 初始化 PWM 波形输出 配置周期并启动硬件
+ *
+ * @param period_ns 输出周期
+ * @return 成功返回 0 失败返回负错误码
+ */
+int bsp_pwm_init(uint32_t period_ns)
 {
     if (period_ns == 0) {
         return -EINVAL;
@@ -122,13 +122,13 @@ static bool initialized;
     return 0;
 }
 
-    /**
-     * @brief 通过 DMA 输出一组 PWM 脉冲（用于 WS2812B 波形）
-     *
-     * @param high_ns 各脉冲的高电平时间数组
-     * @param count 脉冲数量
-    */
-    void bsp_pwm_write(const uint16_t *high_ns, size_t count)
+/**
+ * @brief 通过 DMA 输出一组 PWM 脉冲
+ *
+ * @param high_ns 各脉冲的高电平时间数组
+ * @param count 脉冲数量
+ */
+void bsp_pwm_write(const uint16_t *high_ns, size_t count)
 {
     if (high_ns == NULL || count == 0 || count > BSP_PWM_MAX_PULSES) {
         return;
@@ -195,7 +195,7 @@ static bool initialized;
     pwm_config_force_cmd_timing(HPM_PWM0, pwm_force_immediately);
     pwm_enable_pwm_sw_force_output(HPM_PWM0, PWM_OUTPUT_CHANNEL);
     pwm_set_force_output(HPM_PWM0,
-                         PWM_FORCE_OUTPUT(PWM_OUTPUT_CHANNEL, pwm_output_0));
+    PWM_FORCE_OUTPUT(PWM_OUTPUT_CHANNEL, pwm_output_0));
     pwm_cmp_update_cmp_value(HPM_PWM0, PWM_OUTPUT_CHANNEL, 0, 0);
 
     k_busy_wait(80);

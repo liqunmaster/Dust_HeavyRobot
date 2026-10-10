@@ -2,27 +2,27 @@
 
 #include "pid.hpp"
 
-// 单级速度环（封装一个 PID 速度控制器）
-class SpeedLoop
+// 单级速度环
+class speed_loop
 {
     public:
-    void configure(const alg::PidConfig &config);
+    void configure(const alg::pid_config &config);
     void reset();
     float update(float target_rad_s, float measured_rad_s, float dt_s);
 
     private:
-    alg::Pid pid_{};
+    alg::pid pid_{};
 };
 
-// 位置-速度串级控制环（内层 PID 为速度环）
-class PositionSpeedLoop
+// 位置-速度串级控制环
+class position_speed_loop
 {
     public:
-    void configure(const alg::PidConfig &position, const alg::PidConfig &speed);
+    void configure(const alg::pid_config &position, const alg::pid_config &speed);
     void reset();
     float update(float target_rad, float measured_rad, float measured_rad_s, float dt_s);
 
     private:
-    alg::Pid position_{};
-    alg::Pid speed_{};
+    alg::pid position_{};
+    alg::pid speed_{};
 };

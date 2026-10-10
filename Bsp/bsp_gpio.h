@@ -10,10 +10,10 @@ extern "C"
 {
 #endif
 
-    // 外部中断回调函数指针类型，user_data 为自定义上下文
+    // 外部中断回调函数指针类型 user_data 为自定义上下文
     typedef void (*bsp_gpio_irq_callback_t)(void *user_data);
 
-    // 外部中断(EXTI)管理结构体，封装 GPIO 引脚及其中断回调配置
+    // 外部中断(EXTI)管理结构体 封装 GPIO 引脚及其中断回调配置
     struct bsp_gpio_irq
     {
         const struct device *port;
@@ -35,3 +35,4 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+

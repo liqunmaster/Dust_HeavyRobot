@@ -13,3 +13,4 @@
 #define CFG_TUD_CDC_TX_EPSIZE 512
 #define CFG_TUD_MEM_SECTION __attribute__((section("AHB_SRAM")))
 #define CFG_TUD_MEM_ALIGN __attribute__((aligned(32)))
+

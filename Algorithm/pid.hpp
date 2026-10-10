@@ -9,17 +9,17 @@
 namespace alg
 {
     // 微分作用取用方式的枚举
-    enum class DFirst : uint8_t
+    enum class d_first : uint8_t
     {
         Disable = 0,
         Enable = 1,
     };
 
-    constexpr DFirst PID_D_First_DISABLE = DFirst::Disable;
-    constexpr DFirst PID_D_First_ENABLE = DFirst::Enable;
+    constexpr d_first PID_D_First_DISABLE = d_first::Disable;
+    constexpr d_first PID_D_First_ENABLE = d_first::Enable;
 
     // PID 参数配置结构体
-    struct PidConfig
+    struct pid_config
     {
         float kp = 0.0f;
         float ki = 0.0f;
@@ -32,27 +32,27 @@ namespace alg
         float variable_speed_a = 0.0f;
         float variable_speed_b = 0.0f;
         float integral_separation = 0.0f;
-        DFirst derivative_on_measurement = DFirst::Disable;
+        d_first derivative_on_measurement = d_first::Disable;
         float derivative_filter_tau = 0.0f;
     };
 
     // PID 控制器：支持变积分、积分分离、微分滤波、死区、前馈与角度环
-    class Pid final
+    class pid final
     {
         public:
-        Pid() = default;
+        pid() = default;
 
         /**
          * @brief 根据配置构造 PID 控制器
          *
          * @param config 配置结构体
-        */
-        explicit Pid(const PidConfig &config)
+         */
+        explicit pid(const pid_config &config)
         {
             configure(config);
         }
 
-        void configure(const PidConfig &config);
+        void configure(const pid_config &config);
 
         void reset();
 
@@ -70,7 +70,7 @@ namespace alg
 
                   float variable_speed_a = 0.0f, float variable_speed_b = 0.0f,
 
-                  float integral_separation = 0.0f, DFirst derivative_on_measurement = DFirst::Disable,
+                  float integral_separation = 0.0f, d_first derivative_on_measurement = d_first::Disable,
 
                   float derivative_filter_tau = 0.0f);
 
@@ -106,29 +106,29 @@ namespace alg
          * @brief 获取 PID 输出
          *
          * @return 输出量
-        */
+         */
         float GetOut() const noexcept { return output_; }
 
         /**
          * @brief 获取积分累计误差
          *
          * @return 积分误差
-        */
+         */
         float GetIntegralError() const noexcept { return integral_error_; }
 
         /**
          * @brief 获取 PID 输出
          *
          * @return 输出量
-        */
+         */
         float output() const noexcept { return output_; }
 
         /**
          * @brief 获取当前配置
          *
          * @return 配置结构体
-        */
-        const PidConfig &config() const noexcept { return config_; }
+         */
+        const pid_config &config() const noexcept { return config_; }
 
         private:
         float calculate(float target, float measurement, float dt, bool angle);
@@ -137,7 +137,7 @@ namespace alg
 
         static float wrap_angle(float value);
 
-        PidConfig config_{};
+        pid_config config_{};
 
         float target_ = 0.0f;
 
@@ -158,13 +158,13 @@ namespace alg
         bool initialized_ = false;
     };
 
-    using PID = Pid;
+    using PID = pid;
 
 } // namespace alg
 
-using Pid = alg::Pid;
+using pid = alg::pid;
 using PID = alg::PID;
-using PidConfig = alg::PidConfig;
-using DFirst = alg::DFirst;
+using pid_config = alg::pid_config;
+using d_first = alg::d_first;
 using alg::PID_D_First_DISABLE;
 using alg::PID_D_First_ENABLE;

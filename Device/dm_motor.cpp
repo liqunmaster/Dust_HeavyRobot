@@ -11,107 +11,107 @@ namespace
      * @brief 判断浮点值是否为有限数
      *
      * @param value 待判断值
-     * @return 有限返回 true，否则返回 false
-    */
+     * @return 有限返回 true 否则返回 false
+     */
     bool finite(float value)
     {
         return __builtin_isfinite(value);
     }
 }
 
-    /**
-     * @brief 校验控制模式是否合法
-     *
-     * @param mode 控制模式
-     * @return 合法返回 true，否则返回 false
-    */
-    bool dm_motor::valid_mode(DmControlMode mode)
-    {
-        return mode >= DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT && mode <= DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_EMIT;
-    }
+/**
+ * @brief 校验控制模式是否合法
+ *
+ * @param mode 控制模式
+ * @return 合法返回 true 否则返回 false
+ */
+bool dm_motor::valid_mode(dm_control_mode mode)
+{
+    return mode >= dm_control_mode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT && mode <= dm_control_mode::MOTOR_DM_CONTROL_METHOD_NORMAL_EMIT;
+}
 
-    /**
-     * @brief 根据收发基址与控制模式计算控制报文 ID
-     *
-     * @param tx_id_base 发送 ID 基址
-     * @param mode 控制模式
-     * @return 控制报文 ID
-    */
-    uint16_t dm_motor::control_id(uint16_t tx_id_base, DmControlMode mode)
-    {
-        return tx_id_base + ((static_cast<uint16_t>(mode) - 1) << 8);
-    }
+/**
+ * @brief 根据收发基址与控制模式计算控制报文 ID
+ *
+ * @param tx_id_base 发送 ID 基址
+ * @param mode 控制模式
+ * @return 控制报文 ID
+ */
+uint16_t dm_motor::control_id(uint16_t tx_id_base, dm_control_mode mode)
+{
+    return tx_id_base + ((static_cast<uint16_t>(mode) - 1) << 8);
+}
 
-    /**
-     * @brief 将物理值编码为指定量程内的原始整数
-     *
-     * @param value 物理值
-     * @param minimum 量程下限
-     * @param maximum 量程上限
-     * @param maximum_raw 原始值最大值
-     * @return 编码后的原始整数
-    */
-    uint16_t dm_motor::encode(float value, float minimum, float maximum, uint16_t maximum_raw)
-    {
-        return static_cast<uint16_t>((value - minimum) * maximum_raw / (maximum - minimum));
-    }
+/**
+ * @brief 将物理值编码为指定量程内的原始整数
+ *
+ * @param value 物理值
+ * @param minimum 量程下限
+ * @param maximum 量程上限
+ * @param maximum_raw 原始值最大值
+ * @return 编码后的原始整数
+ */
+uint16_t dm_motor::encode(float value, float minimum, float maximum, uint16_t maximum_raw)
+{
+    return static_cast<uint16_t>((value - minimum) * maximum_raw / (maximum - minimum));
+}
 
-    /**
-     * @brief 将原始整数解码为物理值（对称量程）
-     *
-     * @param raw 原始整数
-     * @param limit 量程绝对值
-     * @param maximum_raw 原始值最大值
-     * @return 解码后的物理值
-    */
-    float dm_motor::decode(uint16_t raw, float limit, uint16_t maximum_raw)
-    {
-        return static_cast<float>(raw) * (2.0f * limit) / maximum_raw - limit;
-    }
+/**
+ * @brief 将原始整数解码为物理值
+ *
+ * @param raw 原始整数
+ * @param limit 量程绝对值
+ * @param maximum_raw 原始值最大值
+ * @return 解码后的物理值
+ */
+float dm_motor::decode(uint16_t raw, float limit, uint16_t maximum_raw)
+{
+    return static_cast<float>(raw) * (2.0f * limit) / maximum_raw - limit;
+}
 
-    /**
-     * @brief 以小端序写入 32 位浮点数据
-     *
-     * @param dst 目标缓冲区
-     * @param value 待写入浮点值
-    */
-    void dm_motor::write_f32(uint8_t *dst, float value)
-    {
-        uint32_t bits;
-        memcpy(&bits, &value, sizeof(bits));
-        for (uint8_t i = 0; i < 4; ++i) {
-            dst[i] = static_cast<uint8_t>(bits >> (8 * i));
-        }
+/**
+ * @brief 以小端序写入 32 位浮点数据
+ *
+ * @param dst 目标缓冲区
+ * @param value 待写入浮点值
+ */
+void dm_motor::write_f32(uint8_t *dst, float value)
+{
+    uint32_t bits;
+    memcpy(&bits, &value, sizeof(bits));
+    for (uint8_t i = 0; i < 4; ++i) {
+        dst[i] = static_cast<uint8_t>(bits >> (8 * i));
     }
+}
 
-    /**
-     * @brief 以小端序写入 16 位无符号数据
-     *
-     * @param dst 目标缓冲区
-     * @param value 待写入的 16 位值
-    */
-    void dm_motor::write_u16(uint8_t *dst, uint16_t value)
-    {
-        dst[0] = static_cast<uint8_t>(value);
-        dst[1] = static_cast<uint8_t>(value >> 8);
-    }
+/**
+ * @brief 以小端序写入 16 位无符号数据
+ *
+ * @param dst 目标缓冲区
+ * @param value 待写入的 16 位值
+ */
+void dm_motor::write_u16(uint8_t *dst, uint16_t value)
+{
+    dst[0] = static_cast<uint8_t>(value);
+    dst[1] = static_cast<uint8_t>(value >> 8);
+}
 
-    /**
-     * @brief 初始化达妙电机，绑定通道、ID、模式与量程
-     *
-     * @param device CAN 通道编号
-     * @param motor_id 电机 ID
-     * @param mode 控制模式
-     * @param limits MIT 量程限制
-     * @param protocol 反馈协议类型
-     * @param master_id 主机（反馈）ID
-     * @param tx_id_base 发送 ID 基址
-     * @return 成功返回 0，参数非法返回负错误码
-    */
-    int dm_motor::init(fdcan_device device, uint8_t motor_id, DmControlMode mode, DmMitLimits limits, fdcan_protocol protocol, uint16_t master_id, uint16_t tx_id_base)
+/**
+ * @brief 初始化达妙电机 绑定通道、ID、模式与量程
+ *
+ * @param device CAN 通道编号
+ * @param motor_id 电机 ID
+ * @param mode 控制模式
+ * @param limits MIT 量程限制
+ * @param protocol 反馈协议类型
+ * @param master_id 主机ID
+ * @param tx_id_base 发送 ID 基址
+ * @return 成功返回 0 参数非法返回负错误码
+ */
+int dm_motor::init(fdcan_device device, uint8_t motor_id, dm_control_mode mode, dm_mit_limits limits, fdcan_protocol protocol, uint16_t master_id, uint16_t tx_id_base)
 {
     if (device < FDCAN_DEVICE_CAN0 || device >= FDCAN_DEVICE_COUNT || motor_id == 0 || motor_id > 15 || master_id > 0x7FF || tx_id_base > 0x4FF || (protocol != FDCAN_PROTOCOL_CLASSIC && protocol != FDCAN_PROTOCOL_FD) ||
-        !valid_mode(mode) || !finite(limits.position) || limits.position <= 0.0f || !finite(limits.velocity) || limits.velocity <= 0.0f || !finite(limits.torque) || limits.torque <= 0.0f) {
+    !valid_mode(mode) || !finite(limits.position) || limits.position <= 0.0f || !finite(limits.velocity) || limits.velocity <= 0.0f || !finite(limits.torque) || limits.torque <= 0.0f) {
         return -EINVAL;
     }
 
@@ -135,24 +135,24 @@ namespace
     return 0;
 }
 
-    /**
-     * @brief 设置 MIT 模式下的目标位置、速度与刚度参数
-     *
-     * @param position 目标位置
-     * @param velocity 目标速度
-     * @param kp 位置刚度
-     * @param kd 阻尼系数
-     * @param torque 目标力矩
-     * @return 成功返回 0，否则返回负错误码
-    */
-    int dm_motor::set_mit(float position, float velocity, float kp, float kd, float torque)
+/**
+ * @brief 设置 MIT 模式下的目标位置、速度与刚度参数
+ *
+ * @param position 目标位置
+ * @param velocity 目标速度
+ * @param kp 位置刚度
+ * @param kd 阻尼系数
+ * @param torque 目标力矩
+ * @return 成功返回 0 否则返回负错误码
+ */
+int dm_motor::set_mit(float position, float velocity, float kp, float kd, float torque)
 {
     if (!finite(position) || !finite(velocity) || !finite(kp) || !finite(kd) || !finite(torque)) {
         return -EINVAL;
     }
 
     const k_spinlock_key_t key = k_spin_lock(&lock_);
-    if (!initialized_ || mode_ != DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT || mode_change_pending_) {
+    if (!initialized_ || mode_ != dm_control_mode::MOTOR_DM_CONTROL_METHOD_NORMAL_MIT || mode_change_pending_) {
         k_spin_unlock(&lock_, key);
         return !initialized_ ? -ENODEV : -EPERM;
     }
@@ -174,20 +174,20 @@ namespace
     return 0;
 }
 
-    /**
-     * @brief 设置角度-角速度模式下的目标位置与限速
-     *
-     * @param position 目标位置
-     * @param max_velocity 最大速度
-     * @return 成功返回 0，否则返回负错误码
-    */
-    int dm_motor::set_position_velocity(float position, float max_velocity)
+/**
+ * @brief 设置角度-角速度模式下的目标位置与限速
+ *
+ * @param position 目标位置
+ * @param max_velocity 最大速度
+ * @return 成功返回 0 否则返回负错误码
+ */
+int dm_motor::set_position_velocity(float position, float max_velocity)
 {
     if (!finite(position) || !finite(max_velocity) || max_velocity < 0.0f) {
         return -EINVAL;
     }
     const k_spinlock_key_t key = k_spin_lock(&lock_);
-    if (!initialized_ || mode_ != DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_ANGLE_OMEGA || mode_change_pending_) {
+    if (!initialized_ || mode_ != dm_control_mode::MOTOR_DM_CONTROL_METHOD_NORMAL_ANGLE_OMEGA || mode_change_pending_) {
         k_spin_unlock(&lock_, key);
         return !initialized_ ? -ENODEV : -EPERM;
     }
@@ -198,19 +198,19 @@ namespace
     return 0;
 }
 
-    /**
-     * @brief 设置速度模式下的目标速度
-     *
-     * @param velocity 目标速度
-     * @return 成功返回 0，否则返回负错误码
-    */
-    int dm_motor::set_velocity(float velocity)
+/**
+ * @brief 设置速度模式下的目标速度
+ *
+ * @param velocity 目标速度
+ * @return 成功返回 0 否则返回负错误码
+ */
+int dm_motor::set_velocity(float velocity)
 {
     if (!finite(velocity)) {
         return -EINVAL;
     }
     const k_spinlock_key_t key = k_spin_lock(&lock_);
-    if (!initialized_ || mode_ != DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_OMEGA || mode_change_pending_) {
+    if (!initialized_ || mode_ != dm_control_mode::MOTOR_DM_CONTROL_METHOD_NORMAL_OMEGA || mode_change_pending_) {
         k_spin_unlock(&lock_, key);
         return !initialized_ ? -ENODEV : -EPERM;
     }
@@ -227,7 +227,7 @@ int dm_motor::set_position_torque(float position, float max_velocity, float curr
         return -EINVAL;
     }
     const k_spinlock_key_t key = k_spin_lock(&lock_);
-    if (!initialized_ || mode_ != DmControlMode::MOTOR_DM_CONTROL_METHOD_NORMAL_EMIT || mode_change_pending_) {
+    if (!initialized_ || mode_ != dm_control_mode::MOTOR_DM_CONTROL_METHOD_NORMAL_EMIT || mode_change_pending_) {
         k_spin_unlock(&lock_, key);
         return !initialized_ ? -ENODEV : -EPERM;
     }
@@ -307,7 +307,7 @@ int dm_motor::build_save_zero_frame(fdcan_frame &frame) const
     return build_command_frame(0xFE, frame);
 }
 
-int dm_motor::build_mode_frame(DmControlMode mode, fdcan_frame &frame) const
+int dm_motor::build_mode_frame(dm_control_mode mode, fdcan_frame &frame) const
 {
     if (!valid_mode(mode)) {
         return -EINVAL;
@@ -329,7 +329,7 @@ int dm_motor::build_mode_frame(DmControlMode mode, fdcan_frame &frame) const
     return make_frame(RegisterCommandId, payload, sizeof(payload), frame);
 }
 
-int dm_motor::mark_mode_request(DmControlMode mode)
+int dm_motor::mark_mode_request(dm_control_mode mode)
 {
     const k_spinlock_key_t key = k_spin_lock(&lock_);
     if (!initialized_ || (mode_change_pending_ && requested_mode_ != mode)) {
@@ -374,7 +374,7 @@ int dm_motor::process_feedback(const fdcan_frame &frame)
     if (id != motor_id_) {
         return -ENOMSG;
     }
-    DmRxData raw{};
+    dm_rx_data raw{};
     raw.motor_id = id;
     raw.status = static_cast<uint8_t>((feedback >> 60) & 0x0F);
     raw.position = static_cast<uint16_t>((feedback >> 40) & 0xFFFF);
@@ -402,26 +402,26 @@ uint32_t dm_motor::get_feedback_count() const
     return static_cast<uint32_t>(atomic_get(&feedback_count_));
 }
 
-DmRxData dm_motor::get_rx_data() const
+dm_rx_data dm_motor::get_rx_data() const
 {
     const k_spinlock_key_t key = k_spin_lock(&lock_);
-    const DmRxData snapshot = rx_data_;
+    const dm_rx_data snapshot = rx_data_;
     k_spin_unlock(&lock_, key);
     return snapshot;
 }
 
-DmData dm_motor::get_data() const
+dm_data dm_motor::get_data() const
 {
     const k_spinlock_key_t key = k_spin_lock(&lock_);
-    const DmData snapshot = data_;
+    const dm_data snapshot = data_;
     k_spin_unlock(&lock_, key);
     return snapshot;
 }
 
-DmControlMode dm_motor::get_mode() const
+dm_control_mode dm_motor::get_mode() const
 {
     const k_spinlock_key_t key = k_spin_lock(&lock_);
-    const DmControlMode snapshot = mode_;
+    const dm_control_mode snapshot = mode_;
     k_spin_unlock(&lock_, key);
     return snapshot;
 }

@@ -14,7 +14,7 @@ namespace
      *
      * @param data 大端字节数据指针
      * @return 转换后的有符号 16 位值
-    */
+     */
     int16_t read_i16_be(const uint8_t *data)
     {
         const uint16_t value = (static_cast<uint16_t>(data[0]) << 8) | static_cast<uint16_t>(data[1]);
@@ -22,24 +22,24 @@ namespace
     }
 
     /**
-     * @brief 数据就绪中断回调，释放就绪信号量
+     * @brief 数据就绪中断回调 释放就绪信号量
      *
-    */
+     */
     void data_ready_callback(void *)
     {
         k_sem_give(&data_ready_sem);
     }
 }
 
-    /**
-     * @brief 通过 SPI 从寄存器连续读取数据
-     *
-     * @param address 起始寄存器地址
-     * @param data 读取数据输出缓冲区
-     * @param length 读取字节数
-     * @return 成功返回 0，失败返回负错误码
-    */
-    int icm42688phxy::read_registers(uint8_t address, uint8_t *data, size_t length)
+/**
+ * @brief 通过 SPI 从寄存器连续读取数据
+ *
+ * @param address 起始寄存器地址
+ * @param data 读取数据输出缓冲区
+ * @param length 读取字节数
+ * @return 成功返回 0 失败返回负错误码
+ */
+int icm42688phxy::read_registers(uint8_t address, uint8_t *data, size_t length)
 {
     if (data == nullptr || length == 0 || length + 1 > SPI_BUFFER_SIZE || address > 0x7F) {
         return -EINVAL;
@@ -58,14 +58,14 @@ namespace
     return 0;
 }
 
-    /**
-     * @brief 通过 SPI 写入单个寄存器
-     *
-     * @param address 寄存器地址
-     * @param value 待写入的寄存器值
-     * @return 成功返回 0，失败返回负错误码
-    */
-    int icm42688phxy::write_register(uint8_t address, uint8_t value)
+/**
+ * @brief 通过 SPI 写入单个寄存器
+ *
+ * @param address 寄存器地址
+ * @param value 待写入的寄存器值
+ * @return 成功返回 0 失败返回负错误码
+ */
+int icm42688phxy::write_register(uint8_t address, uint8_t value)
 {
     if (address > 0x7F) {
         return -EINVAL;
@@ -75,15 +75,15 @@ namespace
     return bsp_spi_transceive(&spi_, tx, rx, sizeof(tx));
 }
 
-    /**
-     * @brief 配置寄存器并回读校验，可带稳定等待时间
-     *
-     * @param address 寄存器地址
-     * @param value 待写入的寄存器值
-     * @param settle_ms 写完后的稳定等待毫秒数
-     * @return 成功返回 0，读写或校验失败返回负错误码
-    */
-    int icm42688phxy::configure_register(uint8_t address, uint8_t value, uint32_t settle_ms)
+/**
+ * @brief 配置寄存器并回读校验 可带稳定等待时间
+ *
+ * @param address 寄存器地址
+ * @param value 待写入的寄存器值
+ * @param settle_ms 写完后的稳定等待毫秒数
+ * @return 成功返回 0 读写或校验失败返回负错误码
+ */
+int icm42688phxy::configure_register(uint8_t address, uint8_t value, uint32_t settle_ms)
 {
     int ret = write_register(address, value);
     if (ret != 0) {
@@ -98,12 +98,12 @@ namespace
     return ret != 0 ? ret : (readback == value ? 0 : -EIO);
 }
 
-    /**
-     * @brief 初始化 ICM42688P，完成 SPI 配置、软复位、各子模块参数与数据就绪中断配置
-     *
-     * @return 成功返回 0，参数或初始化失败返回负错误码
-    */
-    int icm42688phxy::init()
+/**
+ * @brief 初始化 ICM42688P 完成 SPI 配置、软复位、各子模块参数与数据就绪中断配置
+ *
+ * @return 成功返回 0 参数或初始化失败返回负错误码
+ */
+int icm42688phxy::init()
 {
     if (initialized_) {
         return 0;
@@ -129,10 +129,10 @@ namespace
     }
 
     if (configure_register(ICM42688PHXY_REG_COM_CFG, ICM42688PHXY_COM_CFG_BDU_AUTO_INC, 1) != 0 ||
-        configure_register(ICM42688PHXY_REG_ACC_CONF, ICM42688PHXY_ACC_CONF_200HZ, 1) != 0 ||
-        configure_register(ICM42688PHXY_REG_ACC_RANGE, ICM42688PHXY_ACC_RANGE_16G, 1) != 0 ||
-        configure_register(ICM42688PHXY_REG_GYR_CONF, ICM42688PHXY_GYR_CONF_200HZ, 1) != 0 ||
-        configure_register(ICM42688PHXY_REG_GYR_RANGE, ICM42688PHXY_GYR_RANGE_2000DPS, 1) != 0) {
+    configure_register(ICM42688PHXY_REG_ACC_CONF, ICM42688PHXY_ACC_CONF_200HZ, 1) != 0 ||
+    configure_register(ICM42688PHXY_REG_ACC_RANGE, ICM42688PHXY_ACC_RANGE_16G, 1) != 0 ||
+    configure_register(ICM42688PHXY_REG_GYR_CONF, ICM42688PHXY_GYR_CONF_200HZ, 1) != 0 ||
+    configure_register(ICM42688PHXY_REG_GYR_RANGE, ICM42688PHXY_GYR_RANGE_2000DPS, 1) != 0) {
         return -EIO;
     }
 
@@ -163,13 +163,13 @@ namespace
     return 0;
 }
 
-    /**
-     * @brief 等待传感器数据就绪
-     *
-     * @param timeout 等待超时
-     * @return 成功返回 0，超时返回 -EAGAIN，未初始化返回 -ENODEV
-    */
-    int icm42688phxy::wait_data_ready(k_timeout_t timeout)
+/**
+ * @brief 等待传感器数据就绪
+ *
+ * @param timeout 等待超时
+ * @return 成功返回 0 超时返回 -EAGAIN 未初始化返回 -ENODEV
+ */
+int icm42688phxy::wait_data_ready(k_timeout_t timeout)
 {
     if (!initialized_) {
         return -ENODEV;
@@ -177,13 +177,13 @@ namespace
     return k_sem_take(&data_ready_sem, timeout);
 }
 
-    /**
-     * @brief 读取一帧加速度/陀螺仪/温度原始数据
-     *
-     * @param sample 输出的采样数据
-     * @return 成功返回 0，数据未就绪返回 -EAGAIN，失败返回负错误码
-    */
-    int icm42688phxy::read_sample(icm42688phxy_sample &sample)
+/**
+ * @brief 读取一帧加速度/陀螺仪/温度原始数据
+ *
+ * @param sample 输出的采样数据
+ * @return 成功返回 0 数据未就绪返回 -EAGAIN 失败返回负错误码
+ */
+int icm42688phxy::read_sample(icm42688phxy_sample &sample)
 {
     if (!initialized_) {
         return -ENODEV;
@@ -211,15 +211,15 @@ namespace
     return decode_frame(decoded_frame, frame_size, sample);
 }
 
-    /**
-     * @brief 解析原始数据帧，解出加速度/陀螺仪/温度值
-     *
-     * @param frame 待解析的原始字节帧
-     * @param length 帧长度
-     * @param sample 输出的解析结果
-     * @return 成功返回 0，长度不符返回 -EINVAL
-    */
-    int icm42688phxy::decode_frame(const uint8_t *frame, size_t length, icm42688phxy_sample &sample)
+/**
+ * @brief 解析原始数据帧 解出加速度/陀螺仪/温度值
+ *
+ * @param frame 待解析的原始字节帧
+ * @param length 帧长度
+ * @param sample 输出的解析结果
+ * @return 成功返回 0 长度不符返回 -EINVAL
+ */
+int icm42688phxy::decode_frame(const uint8_t *frame, size_t length, icm42688phxy_sample &sample)
 {
     if (frame == nullptr || length != frame_size) {
         return -EINVAL;

@@ -6,9 +6,9 @@ namespace
     /**
      * @brief 将角度折叠到 (-180°, 180°]
      *
-     * @param value 输入角度（度）
-     * @return 折叠后的角度（度）
-    */
+     * @param value 输入角度
+     * @return 折叠后的角度
+     */
     float wrap_degrees(float value)
     {
         value = std::remainder(value, 360.0f);
@@ -23,8 +23,8 @@ namespace alg::attitude
      * @brief 初始化四元数 EKF 姿态估计器
      *
      * @param config 配置结构体
-    */
-    void QuaternionEkf::init(const Config &config)
+     */
+    void quaternion_ekf::init(const Config &config)
     {
         config_ = config;
         config_.lambda = std::clamp(config_.lambda, 0.01f, 1.0f);
@@ -51,11 +51,11 @@ namespace alg::attitude
     }
 
     /**
-     * @brief 依据加速度计测量值初始化姿态（横滚/俯仰到四元数）
+     * @brief 依据加速度计测量值初始化姿态
      *
      * @param sample 一次传感器采样
-    */
-    void QuaternionEkf::init_from_accel(const Sample &sample)
+     */
+    void quaternion_ekf::init_from_accel(const Sample &sample)
     {
         const float norm = math::sqrt(sample.accel[0] * sample.accel[0] + sample.accel[1] * sample.accel[1] + sample.accel[2] * sample.accel[2]);
         if (!std::isfinite(norm) || norm < 1e-3f) {
@@ -75,11 +75,11 @@ namespace alg::attitude
     }
 
     /**
-     * @brief 输入一次 IMU 采样并更新姿态估计（含零偏漂移补偿与收敛检测）
+     * @brief 输入一次 IMU 采样并更新姿态估计
      *
      * @param sample 一次传感器采样
-    */
-    void QuaternionEkf::update(const Sample &sample)
+     */
+    void quaternion_ekf::update(const Sample &sample)
     {
         if (!state_.init) {
             init(Config{});
@@ -185,8 +185,8 @@ namespace alg::attitude
      * @param control 控制输入
      * @param predicted 输出的预测状态
      * @param jacobian 输出的雅可比矩阵
-    */
-    void QuaternionEkf::system_func(const EKF::State &state, const EKF::Ctrl &control, EKF::State &predicted, EKF::Cov &jacobian)
+     */
+    void quaternion_ekf::system_func(const EKF::State &state, const EKF::Ctrl &control, EKF::State &predicted, EKF::Cov &jacobian)
     {
         const float q0 = state(0), q1 = state(1), q2 = state(2), q3 = state(3);
         const float hx = 0.5f * control(0), hy = 0.5f * control(1);
@@ -227,8 +227,8 @@ namespace alg::attitude
      * @param state 当前状态向量
      * @param predicted 输出的预测观测值
      * @param jacobian 输出的雅可比矩阵
-    */
-    void QuaternionEkf::observe_func(const EKF::State &state, EKF::Obs &predicted, EKF::ObsMat &jacobian)
+     */
+    void quaternion_ekf::observe_func(const EKF::State &state, EKF::Obs &predicted, EKF::ObsMat &jacobian)
     {
         const float q0 = state(0), q1 = state(1), q2 = state(2), q3 = state(3);
         predicted << 2.0f * (q1 * q3 - q0 * q2),
@@ -254,8 +254,8 @@ namespace alg::attitude
      *
      * @param state 待归一化的状态向量
      * @return 归一化是否成功
-    */
-    bool QuaternionEkf::normalize(EKF::State &state)
+     */
+    bool quaternion_ekf::normalize(EKF::State &state)
     {
         const float length = math::sqrt(state.head<4>().squaredNorm());
         if (!std::isfinite(length) || length < 1e-6f) {
@@ -267,8 +267,8 @@ namespace alg::attitude
 
     /**
      * @brief 由四元数解算横滚/俯仰/航向并处理多圈航向累积
-    */
-    void QuaternionEkf::update_angles()
+     */
+    void quaternion_ekf::update_angles()
     {
         const float q0 = state_.q[0], q1 = state_.q[1];
         const float q2 = state_.q[2], q3 = state_.q[3];

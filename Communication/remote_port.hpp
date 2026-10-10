@@ -10,7 +10,7 @@
 #include "input.hpp"
 #include "remote_types.hpp"
 
-// 一组从串口通道收集到的原始数据片断，供上层组建完整遥控协议数据
+// 一组从串口通道收集到的原始数据片断 供上层组建完整遥控协议数据
 struct remote_rx_chunk
 {
     remote_uart_source source;

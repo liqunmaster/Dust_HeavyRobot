@@ -6,12 +6,12 @@ namespace alg
     namespace
     {
         /**
-         * @brief 若数值有限则返回原值，否则返回备用值
+         * @brief 若数值有限则返回原值 否则返回备用值
          *
          * @param value 待判断的数值
          * @param fallback 数值无效时的备用值
          * @return 有效值或备用值
-        */
+         */
         float finite_or(float value, float fallback)
         {
             return std::isfinite(value) ? value : fallback;
@@ -19,14 +19,14 @@ namespace alg
     } // namespace
 
     /**
-     * @brief 非线性误差函数 fal（ESO 观测误差反馈用）
+     * @brief 非线性误差函数 fal
      *
      * @param error 输入误差
-     * @param alpha 幂指数（0~1）
+     * @param alpha 幂指数
      * @param delta 线性区间宽度
      * @return fal 非线性输出
-    */
-    float Eso::fal(float error, float alpha, float delta)
+     */
+    float eso::fal(float error, float alpha, float delta)
     {
         const float magnitude = std::fabs(error);
         if (magnitude <= delta) {
@@ -39,8 +39,8 @@ namespace alg
      * @brief 配置 ESO 参数并复位内部状态
      *
      * @param config 配置结构体
-    */
-    void Eso::configure(const EsoConfig &config)
+     */
+    void eso::configure(const eso_config &config)
     {
         config_ = config;
         config_.beta1 = std::max(0.0f, finite_or(config_.beta1, 0.0f));
@@ -60,8 +60,8 @@ namespace alg
      * @brief 复位 ESO 状态变量
      *
      * @param state 初始状态估计值
-    */
-    void Eso::reset(float state)
+     */
+    void eso::reset(float state)
     {
         z1_ = finite_or(state, 0.0f);
         z2_ = 0.0f;
@@ -73,9 +73,9 @@ namespace alg
      *
      * @param measurement 被控对象测量输出
      * @param input 控制输入量
-     * @param dt 采样周期（秒）
-    */
-    void Eso::update(float measurement, float input, float dt)
+     * @param dt 采样周期
+     */
+    void eso::update(float measurement, float input, float dt)
     {
         if (!std::isfinite(measurement) || !std::isfinite(input) || !std::isfinite(dt) || dt <= 0.0f) {
             return;
@@ -95,4 +95,4 @@ namespace alg
         }
     }
 
-} // namespace alg
+}

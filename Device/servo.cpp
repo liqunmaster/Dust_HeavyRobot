@@ -11,12 +11,12 @@ namespace
     const device *const pwm_device = DEVICE_DT_GET(DT_NODELABEL(pwm1));
 }
 
-    /**
-     * @brief 初始化舵机并输出中位脉冲
-     *
-     * @return 成功返回 0，设备未就绪或参数非法返回负错误码
-    */
-    int servo::init()
+/**
+ * @brief 初始化舵机并输出中位脉冲
+ *
+ * @return 成功返回 0 设备未就绪或参数非法返回负错误码
+ */
+int servo::init()
 {
     if (initialized_) {
         return 0;
@@ -35,13 +35,13 @@ namespace
     return ret;
 }
 
-    /**
-     * @brief 设置舵机脉宽
-     *
-     * @param pulse_us 脉宽微秒数，需在有效范围内
-     * @return 成功返回 0，越界返回 -EINVAL，未初始化返回 -ENODEV
-    */
-    int servo::set_pulse_us(uint16_t pulse_us)
+/**
+ * @brief 设置舵机脉宽
+ *
+ * @param pulse_us 脉宽微秒数 需在有效范围内
+ * @return 成功返回 0 越界返回 -EINVAL 未初始化返回 -ENODEV
+ */
+int servo::set_pulse_us(uint16_t pulse_us)
 {
     if (!initialized_) {
         return -ENODEV;
@@ -53,13 +53,13 @@ namespace
     return pwm_set(pwm_device, static_cast<uint32_t>(output_), period_ns, PWM_USEC(pulse_us), PWM_POLARITY_NORMAL);
 }
 
-    /**
-     * @brief 按角度设置舵机转角
-     *
-     * @param degrees 目标角度（度）
-     * @return 成功返回 0，越界返回 -EINVAL
-    */
-    int servo::set_angle(uint16_t degrees)
+/**
+ * @brief 按角度设置舵机转角
+ *
+ * @param degrees 目标角度
+ * @return 成功返回 0 越界返回 -EINVAL
+ */
+int servo::set_angle(uint16_t degrees)
 {
     if (degrees > max_angle_degrees) {
         return -EINVAL;

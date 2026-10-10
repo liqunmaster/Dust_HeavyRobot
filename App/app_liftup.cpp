@@ -16,11 +16,11 @@ namespace
                                  liftup_config::motor_direction_can3};
 
     cubemars motors[4];
-    PositionSpeedLoop loops[4];
+    position_speed_loop loops[4];
     float origin_rad[4]{};
     bool has_origin[4]{};
     bool initialized = false;
-    LiftMotorStatus motor_status[4]{};
+    lift_motor_status motor_status[4]{};
     struct k_spinlock status_lock;
     K_THREAD_STACK_DEFINE(lift_task, 2048);
     struct k_thread lift_thread;
@@ -28,20 +28,20 @@ namespace
     struct k_timer lift_timer;
 
     /**
-     * @brief 抬升定时器回调，唤醒控制线程
+     * @brief 抬升定时器回调 唤醒控制线程
      *
      * @param timer 触发回调的定时器
-    */
+     */
     void lift_timer_callback(struct k_timer *)
     {
         k_sem_give(&lift_sem);
     }
 
     /**
-     * @brief 抬升单次控制步进，对四路电机执行位置控制
+     * @brief 抬升单次控制步进 对四路电机执行位置控制
      *
-     * @param dt_s 控制周期（秒）
-    */
+     * @param dt_s 控制周期
+     */
     void control_step(float dt_s)
     {
         const uint32_t now_ms = k_uptime_get_32();
@@ -50,10 +50,10 @@ namespace
                 continue;
             }
             const fdcan_device bus = static_cast<fdcan_device>(index);
-            FdcanFeedbackTopicData feedback{};
-            const bool has_feedback = fdcan_topic_latest_feedback(bus, motors[index].feedback_id(), FdcanMotorKind::cubemars, feedback) == 0;
+            fdcan_feedback_topic_data feedback{};
+            const bool has_feedback = fdcan_topic_latest_feedback(bus, motors[index].feedback_id(), fdcan_motor_kind::cubemars, feedback) == 0;
             const bool feedback_fresh = has_feedback && now_ms - feedback.timestamp_ms < feedback_timeout_ms;
-            LiftAngleTopicData request{};
+            lift_angle_topic_data request{};
             const bool command_fresh = remote_channel_latest_lift(index, request) == 0 && now_ms - request.timestamp_ms < command_timeout_ms;
             const float target_rad = command_fresh ? request.relative_angle_rad : 0.0f;
             float torque_nm = 0.0f;
@@ -81,7 +81,7 @@ namespace
                     }
                 }
             }
-            const LiftMotorStatus snapshot{feedback_fresh,
+            const lift_motor_status snapshot{feedback_fresh,
                                            has_feedback ? now_ms - feedback.timestamp_ms : UINT32_MAX,
                                            has_feedback ? feedback.valid_count : 0,
                                            target_rad, measured_rad, torque_nm, result,
@@ -93,12 +93,12 @@ namespace
     }
 
     /**
-     * @brief 抬升控制线程入口，等待信号量并循环执行控制步进
+     * @brief 抬升控制线程入口 等待信号量并循环执行控制步进
      *
      * @param arg1 线程参数 1
      * @param arg2 线程参数 2
      * @param arg3 线程参数 3
-    */
+     */
     void thread_entry(void *, void *, void *)
     {
         while (1) {
@@ -109,9 +109,9 @@ namespace
 }
 
 /**
- * @brief 初始化抬升模块，配置四路电机及位置-速度环并启动控制线程
+ * @brief 初始化抬升模块 配置四路电机及位置-速度环并启动控制线程
  *
-*/
+ */
 void app_liftup_init()
 {
     if (initialized) {
@@ -126,14 +126,14 @@ void app_liftup_init()
         }
     }
 
-    alg::PidConfig position_pid{};
+    alg::pid_config position_pid{};
     position_pid.kp = liftup_config::position_kp;
     position_pid.ki = liftup_config::position_ki;
     position_pid.kd = liftup_config::position_kd;
     position_pid.output_limit = liftup_config::max_speed_rad_s;
     position_pid.dt = 0.001f;
 
-    alg::PidConfig speed_pid{};
+    alg::pid_config speed_pid{};
     speed_pid.kp = liftup_config::speed_kp;
     speed_pid.ki = liftup_config::speed_ki;
     speed_pid.kd = liftup_config::speed_kd;
@@ -174,9 +174,9 @@ void app_liftup_init()
 /**
  * @brief 设置单个抬升电机的目标相对角度并发布给控制线程
  *
- * @param can_index 目标电机所在的 CAN 通道索引（0~3）
- * @param relative_angle_rad 相对原点角度（弧度）
-*/
+ * @param can_index 目标电机所在的 CAN 通道索引
+ * @param relative_angle_rad 相对原点角度
+ */
 void app_liftup_set_target(uint8_t can_index, float relative_angle_rad)
 {
     if (!initialized) {
@@ -192,10 +192,10 @@ void app_liftup_set_target(uint8_t can_index, float relative_angle_rad)
 /**
  * @brief 获取单个抬升电机的当前状态信息
  *
- * @param can_index 目标电机所在的 CAN 通道索引（0~3）
+ * @param can_index 目标电机所在的 CAN 通道索引
  * @param status 用于接收状态信息的输出参数
-*/
-void app_liftup_get_status(uint8_t can_index, LiftMotorStatus &status)
+ */
+void app_liftup_get_status(uint8_t can_index, lift_motor_status &status)
 {
     status = {};
     if (can_index >= 4 || !initialized) {

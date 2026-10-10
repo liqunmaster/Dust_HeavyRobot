@@ -7,7 +7,7 @@
 #include "crc.hpp"
 #include "remote_types.hpp"
 
-// 大疆 VT03 遥控器数据样本，含摇杆通道/鼠标/滚轮/按键等
+// 大疆 VT03 遥控器数据样本 含摇杆通道/鼠标/滚轮/按键等
 struct vt03_sample
 {
     uint16_t channel[4];
@@ -26,10 +26,11 @@ struct vt03_sample
     remote_keyboard keyboard;
 };
 
-// VT03 协议解析类，提供数据帧解码功能
+// VT03 协议解析类 提供数据帧解码功能
 class vt03
 {
     public:
     static constexpr size_t frame_size = 21;
     static int decode_frame(const uint8_t *frame, size_t length, vt03_sample &sample);
 };
+

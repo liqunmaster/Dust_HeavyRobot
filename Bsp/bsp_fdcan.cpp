@@ -2,7 +2,6 @@
 
 namespace
 {
-
     struct fdcan_atomic_statistics
     {
         atomic_t tx_queued;
@@ -15,7 +14,7 @@ namespace
         atomic_t recovery_failed;
     };
 
-    // FDCAN 运行上下文结构体，保存某一通道的设备句柄、配置、统计与回调等信息
+    // FDCAN 运行上下文结构体 保存某一通道的设备句柄、配置、统计与回调等信息
     struct fdcan_context
     {
         fdcan_device id;
@@ -45,8 +44,8 @@ namespace
      * @brief 校验 CAN 通道编号是否合法
      *
      * @param device CAN 通道编号
-     * @return 合法返回 true，否则返回 false
-    */
+     * @return 合法返回 true 否则返回 false
+     */
     static bool valid_device(fdcan_device device)
     {
         return device >= FDCAN_DEVICE_CAN0 && device < FDCAN_DEVICE_COUNT;
@@ -56,38 +55,38 @@ namespace
      * @brief 根据通道编号获取对应的 Zephyr 设备句柄
      *
      * @param device CAN 通道编号
-     * @return 对应设备的句柄，找不到时返回 nullptr
-    */
+     * @return 对应设备的句柄 找不到时返回 nullptr
+     */
     static const struct device *device_from_id(fdcan_device device)
     {
         switch (device) {
         #if DT_NODE_HAS_STATUS(DT_NODELABEL(can0), okay)
             case FDCAN_DEVICE_CAN0:
-                return DEVICE_DT_GET(DT_NODELABEL(can0));
+            return DEVICE_DT_GET(DT_NODELABEL(can0));
         #endif
         #if DT_NODE_HAS_STATUS(DT_NODELABEL(can1), okay)
             case FDCAN_DEVICE_CAN1:
-                return DEVICE_DT_GET(DT_NODELABEL(can1));
+            return DEVICE_DT_GET(DT_NODELABEL(can1));
         #endif
         #if DT_NODE_HAS_STATUS(DT_NODELABEL(can2), okay)
             case FDCAN_DEVICE_CAN2:
-                return DEVICE_DT_GET(DT_NODELABEL(can2));
+            return DEVICE_DT_GET(DT_NODELABEL(can2));
         #endif
         #if DT_NODE_HAS_STATUS(DT_NODELABEL(can3), okay)
             case FDCAN_DEVICE_CAN3:
-                return DEVICE_DT_GET(DT_NODELABEL(can3));
+            return DEVICE_DT_GET(DT_NODELABEL(can3));
         #endif
             default:
-                return nullptr;
+            return nullptr;
         }
     }
 
     /**
      * @brief 将内部配置转换为 Zephyr 的 can_mode_t 模式位
      *
-     * @param context FDCAN 运行上下文，读取其工作模式与重发配置
+     * @param context FDCAN 运行上下文 读取其工作模式与重发配置
      * @return Zephyr CAN 模式位掩码
-    */
+     */
     static can_mode_t to_can_mode(const fdcan_context &context)
     {
         can_mode_t mode = 0;
@@ -100,14 +99,14 @@ namespace
         if (context.config.retransmission == FDCAN_RETRANSMISSION_DISABLED) {
             mode |= CAN_MODE_ONE_SHOT;
         }
-#if defined(CONFIG_CAN_MANUAL_RECOVERY_MODE)
+    #if defined(CONFIG_CAN_MANUAL_RECOVERY_MODE)
         mode |= CAN_MODE_MANUAL_RECOVERY;
-#endif
-#if defined(CONFIG_CAN_FD_MODE)
+    #endif
+    #if defined(CONFIG_CAN_FD_MODE)
         if (context.fd_enabled) {
             mode |= CAN_MODE_FD;
         }
-#endif
+    #endif
         return mode;
     }
 
@@ -115,12 +114,11 @@ namespace
      * @brief 校验 FDCAN 初始化配置参数是否合法
      *
      * @param config 待校验的配置指针
-     * @return 合法返回 0，非法返回负错误码
-    */
+     * @return 合法返回 0 非法返回负错误码
+     */
     static int validate_config(const fdcan_config *config)
     {
-        if (config == nullptr || config->mode > FDCAN_MODE_LISTEN_ONLY ||
-            config->retransmission > FDCAN_RETRANSMISSION_DISABLED) {
+        if (config == nullptr || config->mode > FDCAN_MODE_LISTEN_ONLY || config->retransmission > FDCAN_RETRANSMISSION_DISABLED) {
             return -EINVAL;
         }
         return 0;
@@ -129,10 +127,10 @@ namespace
     /**
      * @brief 校验待发送报文的内容是否合法
      *
-     * @param context FDCAN 运行上下文，用于判断是否启用 CAN-FD
+     * @param context FDCAN 运行上下文 用于判断是否启用 CAN-FD
      * @param frame 待校验的报文字段
-     * @return 合法返回 0，非法返回负错误码
-    */
+     * @return 合法返回 0 非法返回负错误码
+     */
     static int validate_frame(const fdcan_context &context, const fdcan_frame *frame)
     {
         if (frame == nullptr || frame->id_type > FDCAN_ID_EXTENDED || frame->protocol > FDCAN_PROTOCOL_FD || frame->bitrate_switch > FDCAN_BRS_ENABLED) {
@@ -159,7 +157,7 @@ namespace
      *
      * @param source 内部 FDCAN 帧
      * @param destination 输出到 Zephyr can_frame 结构
-    */
+     */
     static void to_can_frame(const fdcan_frame &source, struct can_frame *destination)
     {
         memset(destination, 0, sizeof(*destination));
@@ -178,12 +176,12 @@ namespace
     }
 
     /**
-     * @brief Zephyr 发送完成回调，统计结果并调用用户发送回调
+     * @brief Zephyr 发送完成回调 统计结果并调用用户发送回调
      *
      * @param device 回调对应的 CAN 设备
-     * @param error 发送错误码，0 表示成功
+     * @param error 发送错误码 0 表示成功
      * @param user_data 用户上下文指针
-    */
+     */
     static void tx_complete_callback(const struct device *device, int error, void *user_data)
     {
         fdcan_context *context = static_cast<fdcan_context *>(user_data);
@@ -205,12 +203,12 @@ namespace
     }
 
     /**
-     * @brief Zephyr 接收回调，构造接收视图并调用用户接收回调
+     * @brief Zephyr 接收回调 构造接收视图并调用用户接收回调
      *
      * @param device 回调对应的 CAN 设备
      * @param frame 接收到的 Zephyr can_frame
      * @param user_data 用户上下文指针
-    */
+     */
     static void rx_callback(const struct device *device, struct can_frame *frame, void *user_data)
     {
         fdcan_context *context = static_cast<fdcan_context *>(user_data);
@@ -236,8 +234,8 @@ namespace
      * @brief 添加默认的标准帧接收过滤器
      *
      * @param context FDCAN 运行上下文
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @return 成功返回 0 失败返回负错误码
+     */
     static int add_default_filters(fdcan_context *context)
     {
         const struct can_filter standard_filter = {
@@ -258,7 +256,7 @@ namespace
      * @brief 移除默认的接收过滤器
      *
      * @param context FDCAN 运行上下文
-    */
+     */
     static void remove_default_filters(fdcan_context *context)
     {
         if (context->standard_filter_id >= 0) {
@@ -275,9 +273,9 @@ namespace
      * @brief 从设备树读取该通道的比特率等配置
      *
      * @param device CAN 通道编号
-     * @param context FDCAN 运行上下文，输出配置结果
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @param context FDCAN 运行上下文 输出配置结果
+     * @return 成功返回 0 失败返回负错误码
+     */
     static int read_dt_config(fdcan_device device, fdcan_context *context)
     {
         uint32_t bitrate = 0;
@@ -287,62 +285,62 @@ namespace
         bool fd_enabled = false;
 
         switch (device) {
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(can0), okay)
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(can0), okay)
             case FDCAN_DEVICE_CAN0:
-                bitrate = DT_PROP_OR(DT_NODELABEL(can0), bitrate, 0);
-                sample_point = DT_PROP_OR(DT_NODELABEL(can0), sample_point, 0);
-#if defined(CONFIG_CAN_FD_MODE)
-                fd_enabled = DT_NODE_HAS_PROP(DT_NODELABEL(can0), bitrate_data);
-                data_bitrate = DT_PROP_OR(DT_NODELABEL(can0), bitrate_data, 0);
-                data_sample_point = DT_PROP_OR(DT_NODELABEL(can0), sample_point_data, 0);
-#endif
-                break;
-#endif
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(can1), okay)
+            bitrate = DT_PROP_OR(DT_NODELABEL(can0), bitrate, 0);
+            sample_point = DT_PROP_OR(DT_NODELABEL(can0), sample_point, 0);
+        #if defined(CONFIG_CAN_FD_MODE)
+            fd_enabled = DT_NODE_HAS_PROP(DT_NODELABEL(can0), bitrate_data);
+            data_bitrate = DT_PROP_OR(DT_NODELABEL(can0), bitrate_data, 0);
+            data_sample_point = DT_PROP_OR(DT_NODELABEL(can0), sample_point_data, 0);
+        #endif
+            break;
+        #endif
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(can1), okay)
             case FDCAN_DEVICE_CAN1:
-                bitrate = DT_PROP_OR(DT_NODELABEL(can1), bitrate, 0);
-                sample_point = DT_PROP_OR(DT_NODELABEL(can1), sample_point, 0);
-#if defined(CONFIG_CAN_FD_MODE)
-                fd_enabled = DT_NODE_HAS_PROP(DT_NODELABEL(can1), bitrate_data);
-                data_bitrate = DT_PROP_OR(DT_NODELABEL(can1), bitrate_data, 0);
-                data_sample_point = DT_PROP_OR(DT_NODELABEL(can1), sample_point_data, 0);
-#endif
-                break;
-#endif
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(can2), okay)
+            bitrate = DT_PROP_OR(DT_NODELABEL(can1), bitrate, 0);
+            sample_point = DT_PROP_OR(DT_NODELABEL(can1), sample_point, 0);
+        #if defined(CONFIG_CAN_FD_MODE)
+            fd_enabled = DT_NODE_HAS_PROP(DT_NODELABEL(can1), bitrate_data);
+            data_bitrate = DT_PROP_OR(DT_NODELABEL(can1), bitrate_data, 0);
+            data_sample_point = DT_PROP_OR(DT_NODELABEL(can1), sample_point_data, 0);
+        #endif
+            break;
+        #endif
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(can2), okay)
             case FDCAN_DEVICE_CAN2:
-                bitrate = DT_PROP_OR(DT_NODELABEL(can2), bitrate, 0);
-                sample_point = DT_PROP_OR(DT_NODELABEL(can2), sample_point, 0);
-#if defined(CONFIG_CAN_FD_MODE)
-                fd_enabled = DT_NODE_HAS_PROP(DT_NODELABEL(can2), bitrate_data);
-                data_bitrate = DT_PROP_OR(DT_NODELABEL(can2), bitrate_data, 0);
-                data_sample_point = DT_PROP_OR(DT_NODELABEL(can2), sample_point_data, 0);
-#endif
-                break;
-#endif
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(can3), okay)
+            bitrate = DT_PROP_OR(DT_NODELABEL(can2), bitrate, 0);
+            sample_point = DT_PROP_OR(DT_NODELABEL(can2), sample_point, 0);
+        #if defined(CONFIG_CAN_FD_MODE)
+            fd_enabled = DT_NODE_HAS_PROP(DT_NODELABEL(can2), bitrate_data);
+            data_bitrate = DT_PROP_OR(DT_NODELABEL(can2), bitrate_data, 0);
+            data_sample_point = DT_PROP_OR(DT_NODELABEL(can2), sample_point_data, 0);
+        #endif
+            break;
+        #endif
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(can3), okay)
             case FDCAN_DEVICE_CAN3:
-                bitrate = DT_PROP_OR(DT_NODELABEL(can3), bitrate, 0);
-                sample_point = DT_PROP_OR(DT_NODELABEL(can3), sample_point, 0);
-#if defined(CONFIG_CAN_FD_MODE)
-                fd_enabled = DT_NODE_HAS_PROP(DT_NODELABEL(can3), bitrate_data);
-                data_bitrate = DT_PROP_OR(DT_NODELABEL(can3), bitrate_data, 0);
-                data_sample_point = DT_PROP_OR(DT_NODELABEL(can3), sample_point_data, 0);
-#endif
-                break;
-#endif
+            bitrate = DT_PROP_OR(DT_NODELABEL(can3), bitrate, 0);
+            sample_point = DT_PROP_OR(DT_NODELABEL(can3), sample_point, 0);
+        #if defined(CONFIG_CAN_FD_MODE)
+            fd_enabled = DT_NODE_HAS_PROP(DT_NODELABEL(can3), bitrate_data);
+            data_bitrate = DT_PROP_OR(DT_NODELABEL(can3), bitrate_data, 0);
+            data_sample_point = DT_PROP_OR(DT_NODELABEL(can3), sample_point_data, 0);
+        #endif
+            break;
+        #endif
             default:
-                return -EINVAL;
+            return -EINVAL;
         }
 
         if (bitrate == 0) {
             return -EINVAL;
         }
-#if defined(CONFIG_CAN_FD_MODE)
-        if (fd_enabled && data_bitrate == 0) {
-            return -EINVAL;
-        }
-#endif
+        #if defined(CONFIG_CAN_FD_MODE)
+            if (fd_enabled && data_bitrate == 0) {
+                return -EINVAL;
+            }
+        #endif
 
         context->bitrate = bitrate;
         context->sample_point = sample_point;
@@ -353,11 +351,11 @@ namespace
     }
 
     /**
-     * @brief 将上下文配置应用到 Zephyr CAN 驱动（模式、比特率等）
+     * @brief 将上下文配置应用到 Zephyr CAN 驱动
      *
      * @param context FDCAN 运行上下文
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @return 成功返回 0 失败返回负错误码
+     */
     static int apply_configuration(fdcan_context *context)
     {
         int ret = can_set_mode(context->device, to_can_mode(*context));
@@ -379,23 +377,23 @@ namespace
             return ret;
         }
 
-#if defined(CONFIG_CAN_FD_MODE)
-        if (context->fd_enabled) {
-            if (context->data_sample_point == 0) {
-                ret = can_set_bitrate_data(context->device, context->data_bitrate);
-            } else {
-                struct can_timing data_timing{};
-                ret = can_calc_timing_data(context->device, &data_timing, context->data_bitrate, context->data_sample_point);
-                if (ret < 0) {
+        #if defined(CONFIG_CAN_FD_MODE)
+            if (context->fd_enabled) {
+                if (context->data_sample_point == 0) {
+                    ret = can_set_bitrate_data(context->device, context->data_bitrate);
+                } else {
+                    struct can_timing data_timing{};
+                    ret = can_calc_timing_data(context->device, &data_timing, context->data_bitrate, context->data_sample_point);
+                    if (ret < 0) {
+                        return ret;
+                    }
+                    ret = can_set_timing_data(context->device, &data_timing);
+                }
+                if (ret != 0) {
                     return ret;
                 }
-                ret = can_set_timing_data(context->device, &data_timing);
             }
-            if (ret != 0) {
-                return ret;
-            }
-        }
-#endif
+        #endif
         return 0;
     }
 
@@ -403,7 +401,7 @@ namespace
      * @brief 清空 FDCAN 原子统计计数
      *
      * @param statistics 待清零的统计结构体指针
-    */
+     */
     static void clear_atomic_statistics(fdcan_atomic_statistics *statistics)
     {
         atomic_clear(&statistics->tx_queued);
@@ -425,9 +423,9 @@ extern "C"
      * @brief 初始化指定 FDCAN 通道
      *
      * @param device CAN 通道编号
-     * @param config 通道配置，可为空指针表示使用默认配置
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @param config 通道配置 可为空指针表示使用默认配置
+     * @return 成功返回 0 失败返回负错误码
+     */
     int bsp_fdcan_init(fdcan_device device, const fdcan_config *config)
     {
         if (!valid_device(device)) {
@@ -458,9 +456,9 @@ extern "C"
         context.config = *config;
         context.standard_filter_id = -1;
         context.extended_filter_id = -1;
-        context.rx_callback = nullptr;
+        context.rx_callback  = nullptr;
         context.rx_user_data = nullptr;
-        context.tx_callback = nullptr;
+        context.tx_callback  = nullptr;
         context.tx_user_data = nullptr;
         atomic_clear(&context.tx_active);
         atomic_clear(&context.recovering);
@@ -469,7 +467,7 @@ extern "C"
 
         ret = can_stop(context.device);
         if (ret != 0 && ret != -EALREADY) {
-            context.device = nullptr;
+            context.device   = nullptr;
             return ret;
         }
         ret = apply_configuration(&context);
@@ -494,11 +492,11 @@ extern "C"
     }
 
     /**
-     * @brief 反初始化（关闭）指定 FDCAN 通道
+     * @brief 反初始化指定 FDCAN 通道
      *
      * @param device CAN 通道编号
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @return 成功返回 0 失败返回负错误码
+     */
     int bsp_fdcan_deinit(fdcan_device device)
     {
         if (!valid_device(device)) {
@@ -516,12 +514,12 @@ extern "C"
             atomic_clear(&context.recovering);
             return ret;
         }
-        context.rx_callback = nullptr;
+        context.rx_callback  = nullptr;
         context.rx_user_data = nullptr;
-        context.tx_callback = nullptr;
+        context.tx_callback  = nullptr;
         context.tx_user_data = nullptr;
         atomic_clear(&context.tx_active);
-        context.initialized = false;
+        context.initialized  = false;
         context.id = FDCAN_DEVICE_COUNT;
         context.device = nullptr;
         atomic_clear(&context.recovering);
@@ -534,9 +532,9 @@ extern "C"
      *
      * @param device CAN 通道编号
      * @param frame 待发送的报文字段
-     * @param timeout 超时设置，负数表示无限等待
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @param timeout 超时设置 负数表示无限等待
+     * @return 成功返回 0 失败返回负错误码
+     */
     int bsp_fdcan_transmit(fdcan_device device, const fdcan_frame *frame, fdcan_timeout timeout)
     {
         if (!valid_device(device)) {
@@ -581,8 +579,8 @@ extern "C"
      * @param device CAN 通道编号
      * @param callback 接收回调函数指针
      * @param user_data 透传给回调的用户数据
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @return 成功返回 0 失败返回负错误码
+     */
     int bsp_fdcan_set_rx_callback(fdcan_device device, fdcan_rx_callback_t callback, void *user_data)
     {
         if (!valid_device(device)) {
@@ -603,8 +601,8 @@ extern "C"
      * @param device CAN 通道编号
      * @param callback 发送回调函数指针
      * @param user_data 透传给回调的用户数据
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @return 成功返回 0 失败返回负错误码
+     */
     int bsp_fdcan_set_tx_callback(fdcan_device device, fdcan_tx_callback_t callback, void *user_data)
     {
         if (!valid_device(device)) {
@@ -623,9 +621,9 @@ extern "C"
      * @brief 触发总线错误后的恢复流程
      *
      * @param device CAN 通道编号
-     * @param timeout 手动恢复等待超时，负数表示无限等待
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @param timeout 手动恢复等待超时 负数表示无限等待
+     * @return 成功返回 0 失败返回负错误码
+     */
     int bsp_fdcan_recover(fdcan_device device, fdcan_timeout timeout)
     {
         if (!valid_device(device)) {
@@ -639,19 +637,19 @@ extern "C"
             return -EALREADY;
         }
 
-#if defined(CONFIG_CAN_MANUAL_RECOVERY_MODE)
-        const k_timeout_t zephyr_timeout = timeout.milliseconds < 0 ? K_FOREVER : K_MSEC(timeout.milliseconds);
-        int ret = can_recover(context.device, zephyr_timeout);
-        if (ret == 0) {
-            atomic_inc(&context.statistics.recovery_succeeded);
-            atomic_set(&context.recovery_state, FDCAN_RECOVERY_SUCCEEDED);
-            atomic_clear(&context.recovering);
-            return 0;
-        }
-#else
-        ARG_UNUSED(timeout);
-        int ret;
-#endif
+        #if defined(CONFIG_CAN_MANUAL_RECOVERY_MODE)
+            const k_timeout_t zephyr_timeout = timeout.milliseconds < 0 ? K_FOREVER : K_MSEC(timeout.milliseconds);
+            int ret = can_recover(context.device, zephyr_timeout);
+            if (ret == 0) {
+                atomic_inc(&context.statistics.recovery_succeeded);
+                atomic_set(&context.recovery_state, FDCAN_RECOVERY_SUCCEEDED);
+                atomic_clear(&context.recovering);
+                return 0;
+            }
+        #else
+            ARG_UNUSED(timeout);
+            int ret;
+        #endif
 
         atomic_set(&context.recovery_state, FDCAN_RECOVERY_STOPPING);
         ret = can_stop(context.device);
@@ -673,7 +671,7 @@ extern "C"
         atomic_clear(&context.recovering);
         return 0;
 
-    failed:
+        failed:
         atomic_inc(&context.statistics.recovery_failed);
         atomic_set(&context.recovery_state, FDCAN_RECOVERY_FAILED);
         atomic_clear(&context.recovering);
@@ -685,9 +683,9 @@ extern "C"
      *
      * @param device CAN 通道编号
      * @param state 输出总线状态
-     * @param error_count 输出错误计数，可为空指针
-     * @return 成功返回 0，失败返回负错误码
-    */
+     * @param error_count 输出错误计数 可为空指针
+     * @return 成功返回 0 失败返回负错误码
+     */
     int bsp_fdcan_get_state(fdcan_device device, fdcan_bus_state *state, fdcan_error_count *error_count)
     {
         if (!valid_device(device) || state == nullptr) {
@@ -709,21 +707,21 @@ extern "C"
 
         switch (native_state) {
             case CAN_STATE_ERROR_ACTIVE:
-                *state = FDCAN_BUS_ERROR_ACTIVE;
-                break;
+            *state = FDCAN_BUS_ERROR_ACTIVE;
+            break;
             case CAN_STATE_ERROR_WARNING:
-                *state = FDCAN_BUS_ERROR_WARNING;
-                break;
+            *state = FDCAN_BUS_ERROR_WARNING;
+            break;
             case CAN_STATE_ERROR_PASSIVE:
-                *state = FDCAN_BUS_ERROR_PASSIVE;
-                break;
+            *state = FDCAN_BUS_ERROR_PASSIVE;
+            break;
             case CAN_STATE_BUS_OFF:
-                *state = FDCAN_BUS_OFF;
-                break;
+            *state = FDCAN_BUS_OFF;
+            break;
             case CAN_STATE_STOPPED:
             default:
-                *state = FDCAN_BUS_STOPPED;
-                break;
+            *state = FDCAN_BUS_STOPPED;
+            break;
         }
 
         if (error_count != nullptr) {
@@ -738,14 +736,14 @@ extern "C"
      *
      * @param device CAN 通道编号
      * @return 恢复状态枚举值
-    */
+     */
     fdcan_recovery_state bsp_fdcan_get_recovery_state(fdcan_device device)
     {
         if (!valid_device(device)) {
             return FDCAN_RECOVERY_FAILED;
         }
         return static_cast<fdcan_recovery_state>(
-            atomic_get(&contexts[device].recovery_state));
+        atomic_get(&contexts[device].recovery_state));
     }
 
     /**
@@ -753,7 +751,7 @@ extern "C"
      *
      * @param device CAN 通道编号
      * @param statistics 输出统计信息
-    */
+     */
     void bsp_fdcan_get_statistics(fdcan_device device, fdcan_statistics *statistics)
     {
         fdcan_atomic_statistics &source = contexts[device].statistics;
@@ -771,7 +769,7 @@ extern "C"
      * @brief 清零指定 FDCAN 通道的统计数据
      *
      * @param device CAN 通道编号
-    */
+     */
     void bsp_fdcan_clear_statistics(fdcan_device device)
     {
         clear_atomic_statistics(&contexts[device].statistics);
@@ -781,8 +779,8 @@ extern "C"
      * @brief 查询指定 FDCAN 通道是否已就绪
      *
      * @param device CAN 通道编号
-     * @return 就绪返回 true，否则返回 false
-    */
+     * @return 就绪返回 true 否则返回 false
+     */
     bool bsp_fdcan_is_ready(fdcan_device device)
     {
         if (!valid_device(device)) {
@@ -793,11 +791,11 @@ extern "C"
     }
 
     /**
-     * @brief 获取指定 FDCAN 通道的数据段比特率（CAN-FD）
+     * @brief 获取指定 FDCAN 通道的数据段比特率
      *
      * @param device CAN 通道编号
-     * @return 数据段比特率（单位 bit/s），未启用 CAN-FD 或未就绪返回 0
-    */
+     * @return 数据段比特率 未启用 CAN-FD 或未就绪返回 0
+     */
     uint32_t bsp_fdcan_get_data_bitrate(fdcan_device device)
     {
         if (!bsp_fdcan_is_ready(device)) {
@@ -808,11 +806,11 @@ extern "C"
     }
 
     /**
-     * @brief 查询指定 FDCAN 通道是否有待完成（未完成）的发送
+     * @brief 查询指定 FDCAN 通道是否有待完成的发送
      *
      * @param device CAN 通道编号
-     * @return 有待发送报文返回 1，否则返回 0
-    */
+     * @return 有待发送报文返回 1 否则返回 0
+     */
     size_t bsp_fdcan_tx_pending(fdcan_device device)
     {
         if (!valid_device(device)) {

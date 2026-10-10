@@ -25,3 +25,4 @@ namespace dji_motor
     int build_control_frame(fdcan_device device, uint8_t motor_id, fdcan_frame &frame);
 
 }
+

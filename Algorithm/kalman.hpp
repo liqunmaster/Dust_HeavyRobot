@@ -34,7 +34,7 @@ class kalman_axis final
     bool initialized_{false};
 };
 
-// 三轴卡尔曼滤波器（三个独立单轴滤波器的封装）
+// 三轴卡尔曼滤波器
 class kalman_vector3 final
 {
     public:
@@ -55,9 +55,9 @@ class kalman_vector3 final
 namespace alg::filter
 {
 
-    // 模板化扩展卡尔曼滤波器（EKF）：NX 状态维、NZ 观测维、NU 控制维
+    // 模板化扩展卡尔曼滤波器：NX 状态维、NZ 观测维、NU 控制维
     template <int NX, int NZ, int NU>
-    class ExtendedKalman final
+    class extended_kalman final
     {
         public:
         using State = Eigen::Matrix<float, NX, 1>;
@@ -79,20 +79,20 @@ namespace alg::filter
         void init(const State &initial_state, const Cov &initial_covariance);
 
         /**
-         * @brief 注册系统模型函数（用于状态预测）
+         * @brief 注册系统模型函数
          *
          * @param function 系统函数指针
-        */
+         */
         void set_system_func(SystemFunc function)
         {
             system_func_ = function;
         }
 
         /**
-         * @brief 注册观测模型函数（用于观测预测）
+         * @brief 注册观测模型函数
          *
          * @param function 观测函数指针
-        */
+         */
         void set_observe_func(ObserveFunc function)
         {
             observe_func_ = function;
@@ -102,7 +102,7 @@ namespace alg::filter
          * @brief 直接设置状态并同步预测状态
          *
          * @param state 状态向量
-        */
+         */
         void set_state(const State &state)
         {
             state_ = state;
@@ -113,7 +113,7 @@ namespace alg::filter
          * @brief 直接设置协方差并同步预测协方差
          *
          * @param covariance 协方差矩阵
-        */
+         */
         void set_covariance(const Cov &covariance)
         {
             covariance_ = covariance;
@@ -135,7 +135,7 @@ namespace alg::filter
          * @brief 获取当前状态向量估计
          *
          * @return 状态向量
-        */
+         */
         const State &get_x() const
         {
             return state_;
@@ -145,7 +145,7 @@ namespace alg::filter
          * @brief 获取当前协方差矩阵
          *
          * @return 协方差矩阵
-        */
+         */
         const Cov &get_p() const
         {
             return covariance_;
@@ -155,7 +155,7 @@ namespace alg::filter
          * @brief 获取最近一次观测更新的卡方值
          *
          * @return 卡方归一化新息
-        */
+         */
         float get_chi2() const
         {
             return chi2_;
@@ -181,6 +181,6 @@ namespace alg::filter
         float chi2_{0.0f};
     };
 
-    extern template class ExtendedKalman<6, 3, 4>;
+    extern template class extended_kalman<6, 3, 4>;
 
 }

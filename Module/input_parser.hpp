@@ -22,7 +22,7 @@ struct input_sample
     };
 };
 
-// 遥控数据流解析器，负责从字节流中识别并解码各协议帧
+// 遥控数据流解析器 负责从字节流中识别并解码各协议帧
 class input_stream_parser
 {
     public:
@@ -32,7 +32,7 @@ class input_stream_parser
      * @brief 构造解析器并指定数据来源
      *
      * @param source 数据来源串口
-    */
+     */
     explicit input_stream_parser(remote_uart_source source) : source_(source) {}
 
     void reset();

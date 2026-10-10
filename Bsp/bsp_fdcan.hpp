@@ -17,15 +17,15 @@ extern "C"
 {
 #endif
 
-constexpr size_t fdcan_max_data_length = 64;
+    constexpr size_t fdcan_max_data_length = 64;
 
-    // 超时描述结构体，用于指定 FDCAN 发送/恢复操作的等待时间
+    // 超时描述结构体 用于指定 FDCAN 发送/恢复操作的等待时间
     typedef struct
     {
         int32_t milliseconds;
     } fdcan_timeout;
 
-    // FDCAN 通道枚举，标识具体的 CAN 外设和数量
+    // FDCAN 通道枚举 标识具体的 CAN 外设和数量
     typedef enum
     {
         FDCAN_DEVICE_CAN0 = 0,
@@ -35,21 +35,21 @@ constexpr size_t fdcan_max_data_length = 64;
         FDCAN_DEVICE_COUNT = 4,
     } fdcan_device;
 
-    // FDCAN 帧协议枚举，区分经典 CAN 与 CAN-FD
+    // FDCAN 帧协议枚举 区分经典 CAN 与 CAN-FD
     typedef enum
     {
         FDCAN_PROTOCOL_CLASSIC = 0,
         FDCAN_PROTOCOL_FD = 1,
     } fdcan_protocol;
 
-    // FDCAN 帧 ID 类型枚举，区分标准帧与扩展帧
+    // FDCAN 帧 ID 类型枚举 区分标准帧与扩展帧
     typedef enum
     {
         FDCAN_ID_STANDARD = 0,
         FDCAN_ID_EXTENDED = 1,
     } fdcan_id_type;
 
-    // 比特率切换开关枚举，仅在 CAN-FD 生效
+    // 比特率切换开关枚举 仅在 CAN-FD 生效
     typedef enum
     {
         FDCAN_BRS_DISABLED = 0,
@@ -64,7 +64,7 @@ constexpr size_t fdcan_max_data_length = 64;
         FDCAN_MODE_LISTEN_ONLY = 2,
     } fdcan_mode;
 
-    // 重发机制枚举，是否允许控制器自动重发报文
+    // 重发机制枚举 是否允许控制器自动重发报文
     typedef enum
     {
         FDCAN_RETRANSMISSION_ENABLED = 0,
@@ -81,7 +81,7 @@ constexpr size_t fdcan_max_data_length = 64;
         FDCAN_BUS_STOPPED = 4,
     } fdcan_bus_state;
 
-    // FDCAN 恢复流程状态枚举，用于查询总线错误后的恢复进度
+    // FDCAN 恢复流程状态枚举 用于查询总线错误后的恢复进度
     typedef enum
     {
         FDCAN_RECOVERY_IDLE = 0,
@@ -93,7 +93,7 @@ constexpr size_t fdcan_max_data_length = 64;
         FDCAN_RECOVERY_FAILED = 6,
     } fdcan_recovery_state;
 
-    // FDCAN 发送帧结构体，描述待发送报文的完整信息
+    // FDCAN 发送帧结构体 描述待发送报文的完整信息
     typedef struct
     {
         uint32_t id;
@@ -104,21 +104,21 @@ constexpr size_t fdcan_max_data_length = 64;
         uint8_t data[fdcan_max_data_length];
     } fdcan_frame;
 
-    // FDCAN 配置结构体，描述工作模式与重发策略
+    // FDCAN 配置结构体 描述工作模式与重发策略
     typedef struct
     {
         fdcan_mode mode;
         fdcan_retransmission retransmission;
     } fdcan_config;
 
-    // FDCAN 错误计数结构体，记录发送/接收错误次数
+    // FDCAN 错误计数结构体 记录发送/接收错误次数
     typedef struct
     {
         uint8_t transmit;
         uint8_t receive;
     } fdcan_error_count;
 
-    // FDCAN 统计信息结构体，记录收发与恢复等多类计数
+    // FDCAN 统计信息结构体 记录收发与恢复等多类计数
     typedef struct
     {
         uint32_t tx_queued;
@@ -137,7 +137,7 @@ constexpr size_t fdcan_max_data_length = 64;
 
     int bsp_fdcan_transmit(fdcan_device device, const fdcan_frame *frame, fdcan_timeout timeout);
 
-    // FDCAN 接收报文视图结构体，data 指针仅在本回调返回前有效
+    // FDCAN 接收报文视图结构体 data 指针仅在本回调返回前有效
     typedef struct
     {
         uint32_t id;
@@ -152,7 +152,7 @@ constexpr size_t fdcan_max_data_length = 64;
 
     int bsp_fdcan_set_rx_callback(fdcan_device device, fdcan_rx_callback_t callback, void *user_data);
 
-    // 发送完成回调类型，error 为 0 表示发送成功
+    // 发送完成回调类型 error 为 0 表示发送成功
     typedef void (*fdcan_tx_callback_t)(fdcan_device device, int error, void *user_data);
 
     int bsp_fdcan_set_tx_callback(fdcan_device device, fdcan_tx_callback_t callback, void *user_data);
@@ -181,13 +181,13 @@ constexpr fdcan_timeout fdcan_no_wait{ 0 };
 
 constexpr fdcan_timeout fdcan_wait_forever{ -1 };
 
-    /**
-     * @brief 将毫秒数转换为 fdcan_timeout 超时结构体
-     *
-     * @param ms 超时毫秒数，-1 表示无限等待
-     * @return 对应的 fdcan_timeout 结构体
-    */
-    constexpr fdcan_timeout fdcan_msec(int32_t ms)
-    {
-        return fdcan_timeout{ ms };
-    }
+/**
+ * @brief 将毫秒数转换为 fdcan_timeout 超时结构体
+ *
+ * @param ms 超时毫秒数 -1 表示无限等待
+ * @return 对应的 fdcan_timeout 结构体
+ */
+constexpr fdcan_timeout fdcan_msec(int32_t ms)
+{
+    return fdcan_timeout{ ms };
+}

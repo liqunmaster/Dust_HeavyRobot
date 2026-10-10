@@ -1,14 +1,14 @@
 #include "remote_dt7.hpp"
 
-    /**
-     * @brief 解析 DT7 遥控器数据帧并校验通道与开关值
-     *
-     * @param frame 待解析的数据帧
-     * @param length 帧长度
-     * @param sample 输出的解析结果
-     * @return 成功返回 0，长度不符返回 -EINVAL，数据异常返回 -EBADMSG
-    */
-    int dt7::decode_frame(const uint8_t *frame, size_t length, dt7_sample &sample)
+/**
+ * @brief 解析 DT7 遥控器数据帧并校验通道与开关值
+ *
+ * @param frame 待解析的数据帧
+ * @param length 帧长度
+ * @param sample 输出的解析结果
+ * @return 成功返回 0 长度不符返回 -EINVAL 数据异常返回 -EBADMSG
+ */
+int dt7::decode_frame(const uint8_t *frame, size_t length, dt7_sample &sample)
 {
     if (frame == nullptr || length != frame_size) {
         return -EINVAL;
