@@ -1,0 +1,3 @@
+[submodule "App/test"]
+	path = App/test
+	url = https://github.com/liqunmaster/test_heavy.git
