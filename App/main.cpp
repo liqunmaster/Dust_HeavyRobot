@@ -20,8 +20,5 @@ int main(void)
     imu_port_init();
     usb_port_init();
 
-    while (1) {
-        health_monitor_poll();
-        k_sleep(K_MSEC(10));
-    }
+    health_monitor_run();
 }

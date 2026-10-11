@@ -24,8 +24,6 @@ extern "C"
 
     void bsp_usb_task(void);
 
-    void bsp_usb_wait_event(k_timeout_t timeout);
-
     int bsp_usb_receive(void *data, size_t length);
 
     int bsp_usb_transmit(const void *data, size_t length);

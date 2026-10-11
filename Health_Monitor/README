@@ -4,13 +4,13 @@
 
 ## 文件
 
-- `cpu_usage.hpp`：提供 `cpu_usage` 采样类和 `cpu_usage_supervisor()` 调用入口。
+- `cpu_usage.hpp`：提供 CPU 采样、灯带显示与健康巡检的定时信号量循环。
 - `motor_health.hpp/.cpp`：电机离线检测与恢复周期入口。
 - `CMakeLists.txt`：将本目录加入应用的头文件搜索路径。
 
 ## CPU 负载显示
 
-`App/main.cpp` 的主循环每 10 ms 调用 `health_monitor_poll()` 其中的 `cpu_usage_supervisor()` 自身不创建线程 每 500 ms 更新一次 LED。
+`App/main.cpp` 调用 `health_monitor_run()`；其定时器每 10 ms 释放信号量，主线程唤醒后执行 `health_monitor_poll()`。其中 `cpu_usage_supervisor()` 每 500 ms 更新一次 LED。
 
 负载来自 Zephyr 的 `cpu_load_get(true)` 使用 idle hook 后端按采样区间计算 CPU 忙碌比例。采样失败时 LED 熄灭。
 
@@ -20,6 +20,6 @@ WS2812B 使用四分之一权重的指数平滑值显示负载 颜色从绿过�
 
 ## 电机离线恢复
 
-`main()` 在电机绑定后调用 `motor_health_init()` 随后在现有主循环调用 `motor_health_poll()`。该函数每 10 ms 扫描 `fdcan_port` 中的已绑定电机；C610/C620 根据自主反馈超时记录离线状态 底盘任务根据反馈新鲜度独立决定是否输出电流。DM 拨弹电机由 `App/app_booster.cpp` 的状态机恢复。CubeMars 首次发送使能帧后等待反馈 收到使能帧之后的有效反馈才开始发送控制帧。首次使能或控制期间超过 100 ms 未收到有效反馈 就按 `CUBEMARS_RECOVERY_PERIOD_MS` 重复发送使能帧；恢复反馈后继续正常控制。
+`main()` 在电机绑定后调用 `health_monitor_init()` 随后通过 `health_monitor_run()` 每 10 ms 执行 `motor_health_poll()`。该函数扫描 `fdcan_port` 中的已绑定电机；C610/C620 根据自主反馈超时记录离线状态 底盘任务根据反馈新鲜度独立决定是否输出电流。DM 拨弹电机由 `App/app_booster.cpp` 的状态机恢复。CubeMars 首次发送使能帧后等待反馈 收到使能帧之后的有效反馈才开始发送控制帧。首次使能或控制期间超过 100 ms 未收到有效反馈 就按 `CUBEMARS_RECOVERY_PERIOD_MS` 重复发送使能帧；恢复反馈后继续正常控制。
 
 底盘的 0x200 电流帧只由底盘任务构建和发布；没有新运动指令时每 20 ms 发送一次零电流帧。健康监测不另发恢复电流帧。超时与重发周期可在 `motor_health.hpp` 中调整。CAN bus-off 和发送卡住由 `fdcan_port` 的总线状态恢复逻辑处理 电机离线监控只处理单电机的反馈缺失。

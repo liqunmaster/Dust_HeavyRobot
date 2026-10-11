@@ -1,0 +1,43 @@
+diff --git a/drivers/can/mcan_hpmicro.c b/drivers/can/mcan_hpmicro.c
+--- a/drivers/can/mcan_hpmicro.c
++++ b/drivers/can/mcan_hpmicro.c
+@@ -11,6 +11,7 @@
+ #include <zephyr/kernel.h>
+ #include <zephyr/sys/util.h>
+ #include <string.h>
++#include <stddef.h>
+ #include <zephyr/drivers/can.h>
+ #include <zephyr/drivers/can/transceiver.h>
+ #include <zephyr/logging/log.h>
+@@ -148,11 +149,12 @@ static void hpm_mcan_get_message_from_rxbuf(const struct device *dev, uint32_t bu
+     can_rx_callback_t cb;
+     struct can_frame frame;
+     void *cb_arg;
+-    memset(&s_can_rx_buf, 0, sizeof(s_can_rx_buf));
+-    mcan_read_rxbuf(can, buf_index, (mcan_rx_message_t *) &s_can_rx_buf);
++    if (mcan_read_rxbuf(can, buf_index, &s_can_rx_buf) != status_success) {
++        return;
++    }
+ 
+     uint32_t filter_index = hpm_mcan_get_first_filter_index(&s_can_rx_buf, data);
+-    memset(&frame, 0, sizeof(frame));
++    memset(&frame, 0, offsetof(struct can_frame, data));
+     if (s_can_rx_buf.use_ext_id) {
+         frame.id = s_can_rx_buf.ext_id;
+     } else {
+@@ -213,11 +215,12 @@ static void hpm_mcan_get_message_from_rxfifo(const struct device *dev, uint32_t fi
+     can_rx_callback_t cb;
+     struct can_frame frame;
+     void *cb_arg;
+-    memset(&s_can_rx_buf, 0, sizeof(s_can_rx_buf));
+-    mcan_read_rxfifo(can, fifo_index, (mcan_rx_message_t *) &s_can_rx_buf);
++    if (mcan_read_rxfifo(can, fifo_index, &s_can_rx_buf) != status_success) {
++        return;
++    }
+ 
+     uint32_t filter_index = hpm_mcan_get_first_filter_index(&s_can_rx_buf, data);
+-    memset(&frame, 0, sizeof(frame));
++    memset(&frame, 0, offsetof(struct can_frame, data));
+     if (s_can_rx_buf.use_ext_id) {
+         frame.id = s_can_rx_buf.ext_id;
+     } else {

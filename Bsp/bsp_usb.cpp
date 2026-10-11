@@ -4,7 +4,6 @@
 #define USB_CONFIG_LENGTH (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN)
 
 static bool ready;
-K_SEM_DEFINE(usb_event_sem, 0, 1);
 
 static const tusb_desc_device_t device_descriptor = {
     .bLength = sizeof(tusb_desc_device_t),
@@ -142,7 +141,6 @@ static void usb_irq(const void *arg)
 {
     (void)arg;
     tusb_int_handler(0, true);
-    k_sem_give(&usb_event_sem);
 }
 
 /**
@@ -170,7 +168,6 @@ int bsp_usb_init(void)
         return -EIO;
     }
     irq_enable(DT_IRQN(USB_NODE));
-    k_sem_give(&usb_event_sem);
     ready = true;
     return 0;
 }
@@ -184,19 +181,6 @@ void bsp_usb_task(void)
     if (ready) {
         tud_task();
     }
-}
-
-/**
- * @brief 等待 USB 中断事件 可通过超时退出
- *
- * @param timeout 等待超时
- */
-void bsp_usb_wait_event(k_timeout_t timeout)
-{
-    if (!ready) {
-        return;
-    }
-    k_sem_take(&usb_event_sem, timeout);
 }
 
 /**

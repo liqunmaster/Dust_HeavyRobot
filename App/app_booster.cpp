@@ -3,7 +3,7 @@
 
 namespace
 {
-    constexpr fdcan_device bus = FDCAN_DEVICE_CAN1;
+    constexpr fdcan_device bus = FDCAN_DEVICE_CAN2;
     constexpr uint8_t  motor_id    = 0x07;
     constexpr uint16_t tx_id_base  = 0x07;
     constexpr uint16_t feedback_id = 0x08;

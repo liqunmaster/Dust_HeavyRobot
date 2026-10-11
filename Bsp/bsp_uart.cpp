@@ -57,6 +57,18 @@ bool uart::is_ready() const
     return atomic_get(&init_state_) == 2;
 }
 
+int uart::set_rx_notify(void (*notify)(void *), void *context)
+{
+    if (!is_ready()) {
+        return -ENODEV;
+    }
+    const unsigned int key = irq_lock();
+    rx_notify_ = notify;
+    rx_notify_context_ = context;
+    irq_unlock(key);
+    return 0;
+}
+
 /**
  * @brief 初始化串口）
  *
@@ -138,6 +150,9 @@ void uart::handle_event(const struct uart_event &event)
         if (ring_buffer_write(&rx_buffer_, event.data.rx.buf + event.data.rx.offset, event.data.rx.len) != event.data.rx.len) {
             atomic_set(&rx_overflow_, 1);
         }
+        if (rx_notify_ != nullptr) {
+            rx_notify_(rx_notify_context_);
+        }
         break;
         case UART_RX_BUF_REQUEST:
         for (size_t i = 0; i < 2; ++i) {
@@ -160,9 +175,15 @@ void uart::handle_event(const struct uart_event &event)
         case UART_RX_DISABLED:
         rx_active_ = false;
         atomic_set(&rx_overflow_, 1);
+        if (rx_notify_ != nullptr) {
+            rx_notify_(rx_notify_context_);
+        }
         break;
         case UART_RX_STOPPED:
         atomic_set(&rx_overflow_, 1);
+        if (rx_notify_ != nullptr) {
+            rx_notify_(rx_notify_context_);
+        }
         break;
         case UART_TX_DONE:
         case UART_TX_ABORTED:

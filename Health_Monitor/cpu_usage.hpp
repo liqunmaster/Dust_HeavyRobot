@@ -6,7 +6,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/cpu_load.h>
 
+#include "motor_health.hpp"
 #include "ws2812b.hpp"
+
+void imu_port_debug_poll();
 
 // 通过 WS2812B 灯带显示 CPU 占用率的工具类
 class cpu_usage final
@@ -77,5 +80,27 @@ inline void cpu_usage_supervisor()
         sampled = true;
         last_sample_ms = now_ms;
         usage.display_on_ws2812b();
+    }
+}
+
+inline void health_monitor_poll()
+{
+    motor_health_poll();
+    cpu_usage_supervisor();
+    imu_port_debug_poll();
+}
+
+inline void health_monitor_run()
+{
+    static struct k_sem health_sem;
+    static struct k_timer health_timer;
+    k_sem_init(&health_sem, 0, 1);
+    k_timer_init(&health_timer, [](struct k_timer *) {
+        k_sem_give(&health_sem);
+    }, nullptr);
+    k_timer_start(&health_timer, K_MSEC(10), K_MSEC(10));
+    while (true) {
+        k_sem_take(&health_sem, K_FOREVER);
+        health_monitor_poll();
     }
 }

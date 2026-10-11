@@ -19,7 +19,14 @@ namespace
 
     K_THREAD_STACK_DEFINE(imu_stack, 8192);
     struct k_thread imu_thread;
-    constexpr float default_dt_seconds = 1.0f / 200.0f;
+    K_SEM_DEFINE(imu_sem, 0, 1);
+    struct k_timer imu_timer;
+    constexpr float default_dt_seconds = 1.0f / 1000.0f;
+
+    void imu_timer_callback(struct k_timer *)
+    {
+        k_sem_give(&imu_sem);
+    }
 
     uint32_t last_sample_cycles = 0;
     bool have_sample_time = false;
@@ -68,7 +75,7 @@ namespace
 void imu_thread_entry(void *, void *, void *)
 {
     while (true) {
-        (void)imu_device.wait_data_ready(K_MSEC(20));
+        k_sem_take(&imu_sem, K_FOREVER);
 
         imu_sample sample{};
         if (imu_device.read_sample(sample) != 0) {
@@ -93,6 +100,8 @@ void imu_port_init()
     }
 
     k_thread_create(&imu_thread, imu_stack, K_THREAD_STACK_SIZEOF(imu_stack), imu_thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
+    k_timer_init(&imu_timer, imu_timer_callback, nullptr);
+    k_timer_start(&imu_timer, K_MSEC(1), K_MSEC(1));
 }
 
 /**
@@ -121,4 +130,10 @@ int imu_port_get_sample(imu_sample &sample)
 uint32_t imu_port_feedback_count()
 {
     return static_cast<uint32_t>(atomic_get(&state.feedback_count));
+}
+
+void imu_port_debug_poll()
+{
+    ins_euler_angles angles{};
+    (void)ins_get_euler_angles(angles);
 }

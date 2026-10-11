@@ -4,11 +4,6 @@ namespace
 {
 #define IMU_NODE DT_ALIAS(imu_spi)
 
-    K_SEM_DEFINE(data_ready_sem, 0, 1);
-
-    const gpio_dt_spec int1 = GPIO_DT_SPEC_GET(IMU_NODE, int1_gpios);
-    const gpio_dt_spec int2 = GPIO_DT_SPEC_GET(IMU_NODE, int2_gpios);
-
     /**
      * @brief 读取 16 位大端数据并转为有符号值
      *
@@ -21,14 +16,6 @@ namespace
         return static_cast<int16_t>(value);
     }
 
-    /**
-     * @brief 数据就绪中断回调 释放就绪信号量
-     *
-     */
-    void data_ready_callback(void *)
-    {
-        k_sem_give(&data_ready_sem);
-    }
 }
 
 /**
@@ -108,10 +95,6 @@ int icm42688phxy::init()
     if (initialized_) {
         return 0;
     }
-    if (!device_is_ready(int1.port) || !device_is_ready(int2.port)) {
-        return -ENODEV;
-    }
-
     int ret = bsp_spi_init(&spi_, DEVICE_DT_GET(DT_BUS(IMU_NODE)), static_cast<uint16_t>(DT_REG_ADDR(IMU_NODE)), DT_PROP(IMU_NODE, spi_max_frequency), SPI_MODE_CPOL | SPI_MODE_CPHA);
     if (ret != 0) {
         return ret;
@@ -129,9 +112,9 @@ int icm42688phxy::init()
     }
 
     if (configure_register(ICM42688PHXY_REG_COM_CFG, ICM42688PHXY_COM_CFG_BDU_AUTO_INC, 1) != 0 ||
-    configure_register(ICM42688PHXY_REG_ACC_CONF, ICM42688PHXY_ACC_CONF_200HZ, 1) != 0 ||
+    configure_register(ICM42688PHXY_REG_ACC_CONF, ICM42688PHXY_ACC_CONF_1600HZ, 1) != 0 ||
     configure_register(ICM42688PHXY_REG_ACC_RANGE, ICM42688PHXY_ACC_RANGE_16G, 1) != 0 ||
-    configure_register(ICM42688PHXY_REG_GYR_CONF, ICM42688PHXY_GYR_CONF_200HZ, 1) != 0 ||
+    configure_register(ICM42688PHXY_REG_GYR_CONF, ICM42688PHXY_GYR_CONF_1600HZ, 1) != 0 ||
     configure_register(ICM42688PHXY_REG_GYR_RANGE, ICM42688PHXY_GYR_RANGE_2000DPS, 1) != 0) {
         return -EIO;
     }
@@ -140,7 +123,7 @@ int icm42688phxy::init()
         return -EIO;
     }
     k_sleep(K_MSEC(2));
-    if (configure_register(ICM42688PHXY_REG_GYR_CONF, ICM42688PHXY_GYR_CONF_NOISE_OPT, 1) != 0 || write_register(ICM42688PHXY_REG_PWR_CTRL, ICM42688PHXY_PWR_ALL_ON) != 0) {
+    if (configure_register(ICM42688PHXY_REG_GYR_CONF, ICM42688PHXY_GYR_CONF_1600HZ_NOISE_OPT, 1) != 0 || write_register(ICM42688PHXY_REG_PWR_CTRL, ICM42688PHXY_PWR_ALL_ON) != 0) {
         return -EIO;
     }
     k_sleep(K_MSEC(50));
@@ -150,31 +133,8 @@ int icm42688phxy::init()
         return -EIO;
     }
 
-    ret = bsp_gpio_exti_init(&int1_irq_, &int1, GPIO_INT_EDGE_TO_ACTIVE, data_ready_callback, nullptr);
-    if (ret != 0) {
-        return ret;
-    }
-    ret = configure_register(ICM42688PHXY_REG_INT_CFG1, ICM42688PHXY_INT1_DRDY_ACCEL, 1);
-    if (ret != 0) {
-        return ret;
-    }
-
     initialized_ = true;
     return 0;
-}
-
-/**
- * @brief 等待传感器数据就绪
- *
- * @param timeout 等待超时
- * @return 成功返回 0 超时返回 -EAGAIN 未初始化返回 -ENODEV
- */
-int icm42688phxy::wait_data_ready(k_timeout_t timeout)
-{
-    if (!initialized_) {
-        return -ENODEV;
-    }
-    return k_sem_take(&data_ready_sem, timeout);
 }
 
 /**

@@ -11,7 +11,7 @@ namespace
     K_SEM_DEFINE(remote_sem, 0, 1);
     K_THREAD_STACK_DEFINE(remote_stack, 2048);
     struct k_thread remote_thread;
-    struct k_timer remote_timer;
+    struct k_timer partial_frame_timer;
     atomic_t feedback_count;
     bool started;
 
@@ -30,6 +30,16 @@ namespace
         {DEVICE_DT_GET(DT_ALIAS(vt03_uart)), remote_uart_source::uart1, nullptr},
         {DEVICE_DT_GET(DT_ALIAS(dt7_uart)), remote_uart_source::uart4, nullptr},
     };
+
+    void rx_notify(void *)
+    {
+        k_sem_give(&remote_sem);
+    }
+
+    void partial_frame_timeout(struct k_timer *)
+    {
+        k_sem_give(&remote_sem);
+    }
 
     /**
      * @brief 将解析得到的一组遥控样例发布到遥控通道
@@ -69,7 +79,11 @@ namespace
         config.stop_bits = UART_CFG_STOP_BITS_1;
         config.flow_ctrl = UART_CFG_FLOW_CTRL_NONE;
         result = uart_configure(uart, &config);
-        return result == 0 ? transport.port->init() : result;
+        if (result != 0) {
+            return result;
+        }
+        result = transport.port->init();
+        return result == 0 ? transport.port->set_rx_notify(rx_notify, nullptr) : result;
     }
 
     /**
@@ -93,22 +107,16 @@ namespace
             if (count < 0) {
                 break;
             }
+            k_timer_start(&partial_frame_timer, K_MSEC(20), K_NO_WAIT);
             atomic_inc(&feedback_count);
+            if (batch == 3) {
+                k_sem_give(&remote_sem);
+            }
         }
     }
 
     /**
-     * @brief 周期定时器回调：释放信号量以唤醒接收线程
-     *
-     * @param 定时器对象 未使用
-     */
-    void timer_callback(struct k_timer *)
-    {
-        k_sem_give(&remote_sem);
-    }
-
-    /**
-     * @brief 遥控接收线程入口：周期轮询各串口、处理拆帧并统计周期开销
+     * @brief 遥控接收线程入口：收到串口事件后处理拆帧并统计开销
      *
      */
     void thread_entry(void *, void *, void *)
@@ -131,7 +139,7 @@ namespace
 }
 
 /**
- * @brief 初始化各遥控串口并启动接收线程与周期定时器
+ * @brief 初始化各遥控串口并启动事件驱动的接收线程
  *
  */
 void remote_port_init()
@@ -139,17 +147,17 @@ void remote_port_init()
     if (started) {
         return;
     }
+    k_timer_init(&partial_frame_timer, partial_frame_timeout, nullptr);
     for (auto &transport : transports) {
         const int result = init_uart(transport);
         if (result != 0) {
             return;
         }
     }
-    k_timer_init(&remote_timer, timer_callback, nullptr);
     k_thread_create(&remote_thread, remote_stack, K_THREAD_STACK_SIZEOF(remote_stack), thread_entry, nullptr, nullptr, nullptr, K_PRIO_PREEMPT(5), 0, K_NO_WAIT);
     k_thread_name_set(&remote_thread, "remote_rx");
     started = true;
-    k_timer_start(&remote_timer, K_MSEC(5), K_MSEC(5));
+    k_sem_give(&remote_sem);
 }
 
 /**

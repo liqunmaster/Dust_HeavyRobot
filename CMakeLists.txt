@@ -18,6 +18,10 @@ string(FIND "${HPM_MCAN_DRIVER_SOURCE}" "mcan_get_rxfifo_fill_level(can, 1)" HPM
 if(HPM_MCAN_FIFO0_DRAIN EQUAL -1 OR HPM_MCAN_FIFO1_DRAIN EQUAL -1)
     message(FATAL_ERROR "HPM MCAN RX FIFO drain fix is missing; apply patches/hpm-mcan-rx-fifo-drain.patch in ${ZEPHYR_EXTRA_MODULES}")
 endif()
+string(FIND "${HPM_MCAN_DRIVER_SOURCE}" "offsetof(struct can_frame, data)" HPM_MCAN_RX_HOTPATH)
+if(HPM_MCAN_RX_HOTPATH EQUAL -1)
+    message(FATAL_ERROR "HPM MCAN RX hotpath fix is missing; apply patches/hpm-mcan-rx-hotpath.patch in ${ZEPHYR_EXTRA_MODULES}")
+endif()
 unset(HPM_MCAN_DRIVER_SOURCE)
 
 set(HPM_SPI_DRIVER "${ZEPHYR_EXTRA_MODULES}/drivers/spi/spi_hpmicro.c")

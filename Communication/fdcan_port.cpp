@@ -276,7 +276,7 @@ namespace
             frame->id >= standard_id_count || frame->length > 8) {
             return;
         }
-        uint8_t matched[max_rx_slots]{};
+        uint8_t matched[max_rx_slots];
         size_t count = 0;
         const k_spinlock_key_t motor_key = k_spin_lock(&motor_lock);
         uint8_t route = rx_routes[bus][frame->id];
@@ -311,7 +311,10 @@ namespace
             if (target.generation != processed_generation[slot]) {
                 atomic_inc(&rx_dropped);
             }
-            memcpy(target.data, frame->data, sizeof(target.data));
+            memcpy(target.data, frame->data, frame->length);
+            if (frame->length < sizeof(target.data)) {
+                memset(target.data + frame->length, 0, sizeof(target.data) - frame->length);
+            }
             target.length = frame->length;
             target.timestamp_ms = timestamp_ms;
             ++target.generation;
@@ -368,31 +371,12 @@ namespace
      * @brief 把接收到的项分发给匹配电机并解析反馈 随后发布反馈话题
      *
      * @param item 待分发的接收项
+     * @param kind 已匹配的电机类型
+     * @param motor 已匹配的电机对象
      */
-    void dispatch(const rx_item &item)
+    void dispatch(const rx_item &item, motor_kind kind, void *motor)
     {
         if (item.frame.id_type != FDCAN_ID_STANDARD || item.frame.length < 6) {
-            return;
-        }
-
-        motor_kind kind{};
-        void *motor = nullptr;
-        const k_spinlock_key_t key = k_spin_lock(&motor_lock);
-        for (motor_entry &entry : motors) {
-            if (!entry.used || entry.bus != item.bus || entry.feedback_id != item.frame.id || entry.protocol != item.frame.protocol) {
-                continue;
-            }
-            if (entry.kind == motor_kind::dm && (item.frame.data[0] & 0x0F) != entry.motor_id) {
-                continue;
-            }
-
-            kind = entry.kind;
-            motor = entry.motor;
-            break;
-        }
-        k_spin_unlock(&motor_lock, key);
-
-        if (motor == nullptr) {
             return;
         }
         fdcan_feedback_topic_data feedback{};
@@ -464,12 +448,18 @@ namespace
     void refresh_feedback_locked(fdcan_device bus, uint32_t id, fdcan_motor_kind kind)
     {
         size_t slot = max_motors;
+        motor_kind matched_kind{};
+        void *motor = nullptr;
+        fdcan_protocol protocol{};
         const k_spinlock_key_t motor_key = k_spin_lock(&motor_lock);
         for (size_t index = 0; index < motor_count; ++index) {
             const motor_entry &entry = motors[index];
             if (entry.used && entry.bus == bus && entry.feedback_id == id &&
                 static_cast<uint8_t>(entry.kind) == static_cast<uint8_t>(kind)) {
                 slot = index;
+                matched_kind = entry.kind;
+                motor = entry.motor;
+                protocol = entry.protocol;
                 break;
             }
         }
@@ -490,10 +480,10 @@ namespace
                 item.timestamp_ms = snapshot.timestamp_ms;
                 item.frame.id = id;
                 item.frame.id_type = FDCAN_ID_STANDARD;
-                item.frame.protocol = motors[slot].protocol;
+                item.frame.protocol = protocol;
                 item.frame.length = snapshot.length;
                 memcpy(item.frame.data, snapshot.data, snapshot.length);
-                dispatch(item);
+                dispatch(item, matched_kind, motor);
             }
         }
     }

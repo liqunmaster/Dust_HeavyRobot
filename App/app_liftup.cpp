@@ -7,7 +7,7 @@ namespace
                                     liftup_config::motor_present_can1,
                                     liftup_config::motor_present_can2,
                                     liftup_config::motor_present_can3};
-    constexpr uint32_t period_ms = 1;
+    constexpr uint32_t period_ms = 2;
     constexpr uint32_t command_timeout_ms = 100;
     constexpr uint32_t feedback_timeout_ms = 100;
     constexpr float direction[4]{liftup_config::motor_direction_can0,
@@ -131,7 +131,7 @@ void app_liftup_init()
     position_pid.ki = liftup_config::position_ki;
     position_pid.kd = liftup_config::position_kd;
     position_pid.output_limit = liftup_config::max_speed_rad_s;
-    position_pid.dt = 0.001f;
+    position_pid.dt = static_cast<float>(period_ms) * 0.001f;
 
     alg::pid_config speed_pid{};
     speed_pid.kp = liftup_config::speed_kp;
@@ -139,7 +139,7 @@ void app_liftup_init()
     speed_pid.kd = liftup_config::speed_kd;
     speed_pid.integral_limit = liftup_config::max_torque_nm * 0.5f;
     speed_pid.output_limit = liftup_config::max_torque_nm;
-    speed_pid.dt = 0.001f;
+    speed_pid.dt = static_cast<float>(period_ms) * 0.001f;
 
     for (uint8_t index = 0; index < 4; ++index) {
         if (!motor_present[index]) {

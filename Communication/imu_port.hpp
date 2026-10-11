@@ -16,3 +16,5 @@ void imu_port_init();
 int imu_port_get_sample(imu_sample &sample);
 
 uint32_t imu_port_feedback_count();
+
+void imu_port_debug_poll();

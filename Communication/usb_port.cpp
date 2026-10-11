@@ -29,13 +29,12 @@ namespace
     }
 
     /**
-     * @brief USB 接收线程入口：周期性等待事件、驱动底层并处理接收数据
+     * @brief USB 接收线程入口：等待 TinyUSB 事件并处理接收数据
      *
      */
     void usb_thread_entry(void *, void *, void *)
     {
         while (1) {
-            bsp_usb_wait_event(K_MSEC(10));
             bsp_usb_task();
             usb_port_process();
         }

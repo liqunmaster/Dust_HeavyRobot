@@ -46,6 +46,7 @@ class uart
     int init();
     int receive(void *data, size_t length);
     int transmit(const void *data, size_t length);
+    int set_rx_notify(void (*notify)(void *), void *context);
     bool is_ready() const;
 
     /**
@@ -68,6 +69,8 @@ class uart
     uint8_t tx_storage_[tx_capacity]{};
     bool rx_owned_[2]{};
     bool rx_active_ = false;
+    void (*rx_notify_)(void *) = nullptr;
+    void *rx_notify_context_ = nullptr;
 
     atomic_t init_state_ = 0;
     atomic_t rx_overflow_ = 0;
