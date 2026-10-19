@@ -7,28 +7,25 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/pwm.h>
 
-// 舵机输出通道枚举 选择 PWM 通道
-enum class servo_output : uint8_t
+enum class ServoOutput : uint8_t
 {
     p2 = 2,
     p3 = 3,
 };
 
-// 舵机控制类 基于 PWM 设置脉宽或角度
-class servo final
+class Servo final
 {
     public:
-    explicit servo(servo_output output) : output_(output) {}
+    explicit Servo(ServoOutput output) : output_(output) {}
 
-    int init();
+    int Init();
 
-    int set_pulse_us(uint16_t pulse_us);
+    int SetPulseUs(uint16_t pulse_us);
 
-    int set_angle(uint16_t degrees);
+    int SetAngle(uint16_t degrees);
 
     private:
-    servo_output output_;
+    ServoOutput output_;
 
     bool initialized_ = false;
 };
-

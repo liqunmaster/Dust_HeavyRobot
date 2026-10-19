@@ -1,106 +1,38 @@
 #pragma once
 
-#include <errno.h>
 #include <stdint.h>
-
 #include <zephyr/kernel.h>
-#include <zephyr/sys/cpu_load.h>
+#include <zephyr/sys/atomic.h>
 
-#include "motor_health.hpp"
-#include "ws2812b.hpp"
-
-void imu_port_debug_poll();
-
-// 通过 WS2812B 灯带显示 CPU 占用率的工具类
-class cpu_usage final
+class CpuUsage final
 {
     public:
-    /**
-     * @brief 对采样到的 CPU 占用率做低通滤波 并映射为红绿颜色显示到 WS2812B
-     *
-     */
-    void display_on_ws2812b()
-    {
-        float percent = 0.0f;
-        const int ret = sample(percent);
-        if (ret == -EAGAIN) {
-            return;
-        }
-        if (ret != 0) {
-            ws2812b_off();
-            has_filtered_ = false;
-            return;
-        }
-
-        if (has_filtered_) {
-            filtered_percent_ += 0.25f * (percent - filtered_percent_);
-        } else {
-            filtered_percent_ = percent;
-            has_filtered_ = true;
-        }
-
-        constexpr float brightness = 126.0f;
-        const uint8_t red = static_cast<uint8_t>(filtered_percent_ * brightness / 100.0f);
-        const uint8_t green = static_cast<uint8_t>((100.0f - filtered_percent_) * brightness / 100.0f);
-        ws2812b_set_color({red, green, 0});
-    }
-
-    /**
-     * @brief 采样当前 CPU 负载率
-     *
-     * @param percent 输出 CPU 占用百分比
-     * @return 成功返回 0；数据不足返回 -EAGAIN 否则返回负错误码
-     */
-    int sample(float &percent)
-    {
-        const int permille = cpu_load_get(true);
-        if (permille < 0) {
-            return permille;
-        }
-        percent = static_cast<float>(permille) * 0.1f;
-        return 0;
-    }
+    void DisplayOnWs2812b();
+    int Sample(float &percent);
+    float GetLatestPercent() const;
+    void Poll();
 
     private:
-    float filtered_percent_{0.0f};
-    bool has_filtered_{false};
+    atomic_t latest_permille_ = -1;
+    float filtered_percent_ = 0.0f;
+    bool has_filtered_ = false;
+    uint32_t last_sample_ms_ = 0;
+    bool sampled_ = false;
 };
 
-/**
- * @brief CPU 占用监控巡检入口：按采样间隔定期刷新灯带显示
- *
- */
-inline void cpu_usage_supervisor()
+class HealthMonitor final
 {
-    static cpu_usage usage;
-    static uint32_t last_sample_ms = 0;
-    static bool sampled = false;
-    const uint32_t now_ms = k_uptime_get_32();
-    if (!sampled || now_ms - last_sample_ms >= 500) {
-        sampled = true;
-        last_sample_ms = now_ms;
-        usage.display_on_ws2812b();
-    }
-}
+    public:
+    void Poll();
+    void Run();
 
-inline void health_monitor_poll()
-{
-    motor_health_poll();
-    cpu_usage_supervisor();
-    imu_port_debug_poll();
-}
+    private:
+    static void TimerCallback(struct k_timer *timer);
+    struct k_sem sem_{};
+    struct k_timer timer_{};
+};
 
-inline void health_monitor_run()
-{
-    static struct k_sem health_sem;
-    static struct k_timer health_timer;
-    k_sem_init(&health_sem, 0, 1);
-    k_timer_init(&health_timer, [](struct k_timer *) {
-        k_sem_give(&health_sem);
-    }, nullptr);
-    k_timer_start(&health_timer, K_MSEC(10), K_MSEC(10));
-    while (true) {
-        k_sem_take(&health_sem, K_FOREVER);
-        health_monitor_poll();
-    }
-}
+float cpu_usage_latest_percent();
+void cpu_usage_supervisor();
+void health_monitor_poll();
+void health_monitor_run();

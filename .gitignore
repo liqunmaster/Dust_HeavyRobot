@@ -24,3 +24,5 @@ Thumbs.db
 **/*.kicad_pcb.lck
 **/*.bak
 **/*~
+
+/Doc/

@@ -33,3 +33,17 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef __cplusplus
+
+struct UsbState
+{
+    static constexpr size_t configuration_length = TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN;
+    bool ready{};
+    uint32_t irq_count{};
+    uint32_t reset_count{};
+    uint32_t setup_count{};
+    uint8_t other_speed_configuration[configuration_length]{};
+    uint16_t string_descriptor[32]{};
+};
+#endif

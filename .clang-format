@@ -2,7 +2,8 @@ BasedOnStyle: LLVM
 IndentWidth: 4
 UseTab: Never
 NamespaceIndentation: All
-IndentAccessModifiers: true
+IndentAccessModifiers: false
+AccessModifierOffset: 0
 WrapNamespaceBodyWithEmptyLines: Never
 ColumnLimit: 0
 BreakBeforeBraces: Custom

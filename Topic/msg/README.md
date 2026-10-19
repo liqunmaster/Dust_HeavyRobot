@@ -16,5 +16,5 @@ and `float64`. Fixed-size arrays use `type[count] name`.
 
 Add each new `.msg` file and its output header to `Topic/CMakeLists.txt`. During
 `west build`, `Script/tools/generate_messages.py` writes headers to
-`build/generated/msg/`. Include them as `<msg/name.hpp>`; edit the `.msg` file,
+`build/build_h/generated/msg/` or `build/build_l/generated/msg/`. Include them as `<msg/name.hpp>`; edit the `.msg` file,
 not the generated header.

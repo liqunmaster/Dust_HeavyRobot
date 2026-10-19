@@ -22,7 +22,6 @@
     };
 };
 
-/* HI14R3 is reserved for the fusion option. Its driver is not enabled yet. */
 &uart6 {
     status = "okay";
 };

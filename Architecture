@@ -1,29 +1,30 @@
 # 软件架构说明
 
-本项目按职责组织代码。实时数据主要通过 Topic 中的最新值通道传递；设备初始化、绑定、状态查询等管理操作会直接调用对应模块接口。
-
-## 各层职责
+同一仓库包含两个独立 Zephyr 应用，共用公共库和消息定义。
 
 | 目录 | 职责 |
 | --- | --- |
-| `Bsp` | 板级 CAN、UART、SPI、USB 等外设驱动适配。 |
-| `Device` | 电机、遥控器、IMU 等设备协议和数据换算。 |
-| `Communication` | 外设收发、设备绑定、CAN 帧路由与发送调度。 |
-| `Module` | 遥控数据解析、姿态解算和控制环等计算。 |
-| `Topic` | 保存和发布遥控指令、CAN 反馈及控制帧的最新值。 |
-| `App` | 底盘、升降和拨弹等应用控制任务及启动入口。 |
-| `Health_Monitor` | 电机在线状态、自动恢复及 CPU 使用率监测。 |
-| `Algorithm` | PID、滤波和姿态估计等通用算法。 |
+| `firmware/Dust_HeavyRobot_H` | H 入口、配置、yaw/pitch/shoot 和 H McuCommon。 |
+| `firmware/Dust_HeavyRobot_L` | L 入口、配置、chassis/liftup/booster 和 L McuCommon。 |
+| `firmware/common` | 两端共享的 InputManager 输入业务映射。 |
+| `firmware/test` | 独立 Git 仿真子模块，不参与 H/L 固件构建。 |
+| `Topic` | .msg 定义、生成类型与线程间最新消息快照，不解释遥控映射。 |
+| `platform` | 外设通信适配、CAN 发送调度、原始接收快照和 RS485 服务。 |
+| `protocol` | 设备与板间协议的编解码及协议状态。 |
+| `Bsp` | 板级 CAN、UART、SPI、USB 等外设适配。 |
+| `Device` | SPI IMU、舵机和灯带等直接硬件设备。 |
+| `Module` | 输入解析、姿态估计与控制环等共享计算模块。 |
+| `Health_Monitor` | 当前电机在线检查、恢复、CPU 使用率监测与指示。 |
+| `math` | 原 Algorithm，PID、滤波和数学工具等。 |
+| `cmake/mcu_common.cmake` | 共享配置与公共组件装配。 |
 
-## 主要数据流
+遥控样本经 InputManager 映射为本地 Topic。跨板由各端 McuCommon 显式处理，
+共用 protocol/mcu 和 platform CAN；L 端 BoardInput 组合旧版子帧，再发布本地消息。
+应用在本板读取目标和反馈、计算闭环，由协议对象组帧后提交通信层。
 
-- 遥控器：`Bsp` 接收 UART 数据 `Communication` 调用 `Module` 解析 解析结果经 `Topic` 提供给 `App`。
-- CAN 反馈：`Bsp` 接收帧 `Communication` 按总线和 ID 保存最新原始帧；读取反馈时由 `Device` 解码 再通过 `Topic` 提供给 `App`。
-- CAN 控制：`App` 使用 `Module` 计算目标 由 `Device` 组帧；周期控制帧经 `Topic` 交给 `Communication` 调度 最后由 `Bsp` 发送。配置、使能和恢复命令可直接调用 `Communication` 接口。
-- IMU：`Communication` 从 `Device` 读取采样并调用 `Module` 更新姿态估计。
-- 健康监测：`main` 周期调用 `Health_Monitor` 后者查询电机状态 并通过 `Communication` 发送必要的恢复命令。
+CAN 周期控制继续使用最新值槽；配置、使能与恢复命令使用 one-shot 队列。
+达妙电机不得与使用 CAN ID 0x000、且采用“发一帧、回一帧”方式的设备挂在同一 CAN 总线上。
 
-## 实时控制约束
-
-- CAN 周期控制使用最新值槽；尚未发送的旧控制值可被新值覆盖。发送失败或完成失败后丢弃旧帧 不延后重发。
-- 达妙电机不得与使用 CAN ID `0x000`、且采用“发一帧、回一帧”通信方式的设备挂在同一条 CAN 总线上。
+构建烧录入口只有 Script/build&flash.cmd，H/L 产物分别在 build/build_h、build/build_l。
+详细目录、消息接口、验收与后续调度/离线改造边界见
+[第一阶段实施记录](Doc/双板架构第一阶段实施记录.md)。

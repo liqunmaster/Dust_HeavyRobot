@@ -1,18 +1,8 @@
-/*
- * Copyright 2026 Dust Robotics
- * SPDX-License-Identifier: Apache-2.0
- *
- * Dust HeavyHero HPM5361ICB main board.
- * Base wiring and defaults for the custom board. Application overlays may
- * adjust peripheral speed, bitrate and DMA settings.
- */
-
 /dts-v1/;
 
 #include <hpmicro/hpm5361.dtsi>
 #include "hpm5361icb-pinctrl.dtsi"
 
-/* Zephyr 4.4 uses isa-base/isa-extensions; remove HPM's legacy alias. */
 &cpu0 {
 	/delete-property/ riscv,isa;
 	riscv,isa-extensions = "m", "a", "f", "c", "zicsr", "zifencei";
@@ -43,7 +33,6 @@
 			zephyr,memory-region = "AHB_SRAM";
 		};
 
-		/* UART1: external connector on PY07/PY06. */
 		uart1: serial@f0044000 {
 			compatible = "hpmicro,hpm-uart";
 			reg = <0xf0044000 0x1000>;
@@ -54,7 +43,6 @@
 			status = "disabled";
 		};
 
-		/* UART2: VT02/VT03 shared figure-transmission interface */
 		uart2: serial@f0048000 {
 			compatible = "hpmicro,hpm-uart";
 			reg = <0xf0048000 0x1000>;
@@ -65,7 +53,6 @@
 			status = "disabled";
 		};
 
-		/* UART3: debug console / redefined printf */
 		uart3: serial@f004c000 {
 			compatible = "hpmicro,hpm-uart";
 			reg = <0xf004c000 0x1000>;
@@ -76,7 +63,6 @@
 			status = "okay";
 		};
 
-		/* UART4: DT7 remote receiver */
 		uart4: serial@f0050000 {
 			compatible = "hpmicro,hpm-uart";
 			reg = <0xf0050000 0x1000>;
@@ -87,7 +73,6 @@
 			status = "disabled";
 		};
 
-		/* UART5: external connector on PA23/PA22, with PA21 DE. */
 		uart5: serial@f0054000 {
 			compatible = "hpmicro,hpm-uart";
 			reg = <0xf0054000 0x1000>;
@@ -98,7 +83,6 @@
 			status = "disabled";
 		};
 
-		/* UART6: external connector on PA24/PA25. */
 		uart6: serial@f0058000 {
 			compatible = "hpmicro,hpm-uart";
 			reg = <0xf0058000 0x1000>;
@@ -109,7 +93,6 @@
 			status = "disabled";
 		};
 
-		/* SPI1: external W25Q128 log flash, not the XIP boot flash. */
 		spi1: spi@f0074000 {
 			compatible = "hpmicro,hpm-spi";
 			reg = <0xf0074000 0x4000>;
@@ -121,7 +104,6 @@
 			#size-cells = <0>;
 		};
 
-		/* SPI2: ICM-42688P-HXY IMU */
 		spi2: spi@f0078000 {
 			compatible = "hpmicro,hpm-spi";
 			reg = <0xf0078000 0x4000>;
@@ -135,7 +117,6 @@
 			cs-minimum-high-time = <11>;
 		};
 
-		/* CAN0: friction wheels */
 		can0: can@f0280000 {
 			compatible = "hpmicro,hpm-mcan";
 			reg = <0xf0280000 0x1000>;
@@ -147,7 +128,6 @@
 			status = "disabled";
 		};
 
-		/* CAN1: chassis */
 		can1: can@f0284000 {
 			compatible = "hpmicro,hpm-mcan";
 			reg = <0xf0284000 0x1000>;
@@ -159,7 +139,6 @@
 			status = "disabled";
 		};
 
-		/* CAN2: gimbal / loader */
 		can2: can@f0288000 {
 			compatible = "hpmicro,hpm-mcan";
 			reg = <0xf0288000 0x1000>;
@@ -171,7 +150,6 @@
 			status = "disabled";
 		};
 
-		/* CAN3: gimbal / loader */
 		can3: can@f028c000 {
 			compatible = "hpmicro,hpm-mcan";
 			reg = <0xf028c000 0x1000>;
@@ -284,7 +262,7 @@
 &spi2 {
 	pinctrl-0 = <&pinmux_spi2>;
 	pinctrl-names = "default";
-	/* HDMA channels 6/7 muxed to SPI2 RX/TX */
+
 	dmas = <&hdma 6 0x2c>, <&hdma 7 0x2d>;
 	dma-names = "rx", "tx";
 	status = "okay";
@@ -358,9 +336,6 @@
 		nor-cfg-opt-opt0 = <0x05>;
 		nor-cfg-opt-opt1 = <0x1000>;
 
-		/* The SDK flash page-layout driver requires these partition labels.
-		 * They cover only the 1 MiB boot flash; this board does not use MCUboot.
-		 */
 		partitions {
 			compatible = "fixed-partitions";
 			#address-cells = <1>;

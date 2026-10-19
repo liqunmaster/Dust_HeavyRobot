@@ -2,45 +2,99 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build",
+            "label": "build_h",
             "type": "process",
-            "command": "D:/MCU/zephyr/zephyrproject/.venv/Scripts/west.exe",
+            "command": "cmd.exe",
             "args": [
-                "build", "-b", "hpm5361icb",
-                "-s", "${workspaceFolder}",
-                "-d", "${workspaceFolder}/build",
-                "-p", "always"
+                "/d",
+                "/c",
+                "Script\\build^&flash.cmd",
+                "H",
+                "Build",
+                "Auto"
             ],
             "options": {
-                "cwd": "D:/MCU/zephyr/zephyrproject",
-                "env": {
-                    "ZEPHYR_BASE": "D:/MCU/zephyr/zephyrproject/zephyr",
-                    "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
-                    "ZEPHYR_SDK_INSTALL_DIR": "D:/MCU/zephyr/zephyr-sdk",
-                    "HPM_SDK_DIR": "D:/MCU/hpm/hpm_sdk"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "group": "build",
-            "problemMatcher": ["$gcc"]
+            "problemMatcher": [
+                "$gcc"
+            ]
         },
         {
-            "label": "Flash",
+            "label": "flash_h",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "cmd.exe",
             "args": [
-                "-NoProfile", "-NonInteractive", "-Command",
-                "& 'D:/MCU/zephyr/zephyrproject/.venv/Scripts/west.exe' build -b hpm5361icb -s '${workspaceFolder}' -d '${workspaceFolder}/build' -p never; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Location -LiteralPath '${workspaceFolder}'; & 'D:/MCU/hpm/tools/openocd/openocd.exe' -s 'D:/MCU/hpm/tools/openocd/tcl' -s 'D:/MCU/hpm/hpm_sdk/boards/openocd' -f '${workspaceFolder}/Board/hpm5361/hpm5361.cfg' -c 'adapter speed 100' -c 'hpm5361.cpu0 configure -work-area-phys 0x0 -work-area-size 0x20000 -work-area-backup 0' -c 'program {${workspaceFolder}/build/zephyr/Dust_HeavyRobot.elf} verify reset exit'; exit $LASTEXITCODE"
+                "/d",
+                "/c",
+                "Script\\build^&flash.cmd",
+                "H",
+                "Flash",
+                "Auto"
             ],
             "options": {
-                "cwd": "D:/MCU/zephyr/zephyrproject",
-                "env": {
-                    "ZEPHYR_BASE": "D:/MCU/zephyr/zephyrproject/zephyr",
-                    "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
-                    "ZEPHYR_SDK_INSTALL_DIR": "D:/MCU/zephyr/zephyr-sdk",
-                    "HPM_SDK_DIR": "D:/MCU/hpm/hpm_sdk"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": ["$gcc"]
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "build_l",
+            "type": "process",
+            "command": "cmd.exe",
+            "args": [
+                "/d",
+                "/c",
+                "Script\\build^&flash.cmd",
+                "L",
+                "Build",
+                "Auto"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "flash_l",
+            "type": "process",
+            "command": "cmd.exe",
+            "args": [
+                "/d",
+                "/c",
+                "Script\\build^&flash.cmd",
+                "L",
+                "Flash",
+                "Auto"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "flash_l_vllink",
+            "type": "process",
+            "command": "cmd.exe",
+            "args": [
+                "/d",
+                "/c",
+                "Script\\build^&flash.cmd",
+                "L",
+                "Flash",
+                "Vllink"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }

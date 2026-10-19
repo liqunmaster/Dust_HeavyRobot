@@ -2,13 +2,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
+            "name": "Debug H",
             "type": "cortex-debug",
-            "request": "launch",
+            "request": "attach",
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "Build",
-            "postDebugTask": "Reset Target",
-            "executable": "${workspaceFolder}/build/zephyr/Dust_HeavyRobot.elf",
+            "preLaunchTask": "flash_h",
+            "executable": "${workspaceFolder}/build/build_h/zephyr/Dust_HeavyRobot.elf",
             "servertype": "openocd",
             "serverpath": "D:/MCU/hpm/tools/openocd/openocd.exe",
             "searchDir": [
@@ -16,13 +15,58 @@
                 "D:/MCU/hpm/hpm_sdk/boards/openocd"
             ],
             "configFiles": [
-                "${workspaceFolder}/Board/hpm5361/hpm5361.cfg"
+                "${workspaceFolder}/Board/hpm5361/vllink.cfg"
             ],
             "openOCDLaunchCommands": [
-                "adapter speed 100"
+                "adapter speed 10"
             ],
-            "gdbPath": "D:/MCU/zephyr/zephyr-sdk/gnu/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gdb.exe",
-            "runToEntryPoint": "main",
+            "gdbPath": "D:/MCU/hpm/toolchains/rv32imac_zicsr_zifencei_multilib_b_ext-win/bin/riscv32-unknown-elf-gdb.exe",
+            "showDevDebugOutput": "raw",
+            "postLaunchCommands": []
+        },
+        {
+            "name": "Debug L",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "flash_l",
+            "executable": "${workspaceFolder}/build/build_l/zephyr/Dust_HeavyRobot.elf",
+            "servertype": "openocd",
+            "serverpath": "D:/MCU/hpm/tools/openocd/openocd.exe",
+            "searchDir": [
+                "D:/MCU/hpm/tools/openocd/tcl",
+                "D:/MCU/hpm/hpm_sdk/boards/openocd"
+            ],
+            "configFiles": [
+                "${workspaceFolder}/Board/hpm5361/vllink.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 10"
+            ],
+            "gdbPath": "D:/MCU/hpm/toolchains/rv32imac_zicsr_zifencei_multilib_b_ext-win/bin/riscv32-unknown-elf-gdb.exe",
+            "showDevDebugOutput": "raw",
+            "postLaunchCommands": []
+        },
+        {
+            "name": "Debug L (Vllink temporary)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "flash_l_vllink",
+            "executable": "${workspaceFolder}/build/build_l/zephyr/Dust_HeavyRobot.elf",
+            "servertype": "openocd",
+            "serverpath": "D:/MCU/hpm/tools/openocd/openocd.exe",
+            "searchDir": [
+                "D:/MCU/hpm/tools/openocd/tcl",
+                "D:/MCU/hpm/hpm_sdk/boards/openocd"
+            ],
+            "configFiles": [
+                "${workspaceFolder}/Board/hpm5361/vllink.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 10"
+            ],
+            "gdbPath": "D:/MCU/hpm/toolchains/rv32imac_zicsr_zifencei_multilib_b_ext-win/bin/riscv32-unknown-elf-gdb.exe",
             "showDevDebugOutput": "raw",
             "postLaunchCommands": []
         }

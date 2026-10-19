@@ -10,7 +10,6 @@
 #include <hpm_clock_drv.h>
 #include <hpm_crc_drv.h>
 
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -19,4 +18,3 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-

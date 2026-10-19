@@ -10,34 +10,31 @@
 #include <zephyr/kernel.h>
 
 #include "bsp_spi.hpp"
-#include "icm42688p_hxy_reg.h"
+#include "icm42688p_hxy_reg.hpp"
 
-// ICM42688P 惯性传感器采样数据 包含加速度计/陀螺仪与温度原始值
-struct icm42688phxy_sample
+struct Icm42688pHxySample
 {
     int16_t accel_raw[3];
     int16_t gyro_raw[3];
     int16_t temperature_raw;
 };
 
-// ICM42688P 六轴惯性传感器驱动类 基于 SPI 通信与外部中断
-class icm42688phxy final
+class Icm42688pHxy final
 {
     public:
-    static constexpr size_t frame_size = ICM42688PHXY_SENSOR_FRAME_SIZE + ICM42688PHXY_TEMP_FRAME_SIZE;
+    static constexpr size_t frame_size = Icm42688pRegisters::sensor_frame_size + Icm42688pRegisters::temp_frame_size;
 
-    int init();
-    int read_sample(icm42688phxy_sample &sample);
+    int Init();
+    int ReadSample(Icm42688pHxySample &sample);
 
-    static int decode_frame(const uint8_t *frame, size_t length, icm42688phxy_sample &sample);
+    static int DecodeFrame(const uint8_t *frame, size_t length, Icm42688pHxySample &sample);
 
     private:
-    int read_registers(uint8_t address, uint8_t *data, size_t length);
-    int write_register(uint8_t address, uint8_t value);
-    int configure_register(uint8_t address, uint8_t value, uint32_t settle_ms);
+    int ReadRegisters(uint8_t address, uint8_t *data, size_t length);
+    int WriteRegister(uint8_t address, uint8_t value);
+    int ConfigureRegister(uint8_t address, uint8_t value, uint32_t settle_ms);
 
-    spi spi_{};
+    Spi spi_{};
 
     bool initialized_{false};
 };
-

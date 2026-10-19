@@ -8,12 +8,7 @@
 #include <hpm_pllctlv2_drv.h>
 #include <hpm_soc.h>
 
-    /**
-     * @brief 初始化板级 CPU 时钟 配置 PLL0 频率与 CPU 分频
-     *
-     * @return 成功返回 0 配置失败返回 -EIO
-    */
-    static int hpm5361_board_clock_init(void)
+static int hpm5361_board_clock_init(void)
 {
     if (pllctlv2_init_pll_with_freq(HPM_PLLCTLV2, PLLCTLV2_PLL_PLL0, 960000000) != status_success) {
         return -EIO;
@@ -35,11 +30,7 @@ const uint32_t hpm5361_nor_cfg_option[4] = {
 };
 #endif
 
-    /**
-     * @brief C 启动阶段复用 PA04~PA08 引脚为 JTAG 调试接口
-     *
-    */
-    void c_startup(void)
+void c_startup(void)
 {
     HPM_IOC->PAD[IOC_PAD_PA04].FUNC_CTL = IOC_PA04_FUNC_CTL_JTAG_TDO;
     HPM_IOC->PAD[IOC_PAD_PA05].FUNC_CTL = IOC_PA05_FUNC_CTL_JTAG_TDI;
@@ -48,12 +39,7 @@ const uint32_t hpm5361_nor_cfg_option[4] = {
     HPM_IOC->PAD[IOC_PAD_PA08].FUNC_CTL = IOC_PA08_FUNC_CTL_JTAG_TRST;
 }
 
-    /**
-     * @brief 执行软件复位 触发 POR 复位并进入死循环等待
-     *
-     * @param type 复位类型
-    */
-    void sys_arch_reboot(int type)
+void sys_arch_reboot(int type)
 {
     ARG_UNUSED(type);
 

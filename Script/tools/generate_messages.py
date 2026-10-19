@@ -58,7 +58,6 @@ def parse_message(path: Path):
 
 def render_header(source: Path, struct_name: str, fields) -> str:
     lines = [
-        f"// Generated from {source.name}. Do not edit.",
         "#pragma once",
         "",
         "#include <stdint.h>",

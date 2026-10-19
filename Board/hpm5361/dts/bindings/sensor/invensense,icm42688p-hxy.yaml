@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
-
 description: ICM-42688P-HXY connected through SPI2
 
 compatible: "invensense,icm42688p-hxy"

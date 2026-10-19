@@ -1,5 +1,3 @@
-// HPM5361 has 32 DMA channels. Reserve 0/1 for UART3, 2 for PWM,
-// 4..7 for SPI, and give every other UART its own RX/TX pair.
 &hdma {
     dma-channels = <32>;
 };
