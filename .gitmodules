@@ -1,3 +1,12 @@
 [submodule "App/test"]
 	path = firmware/test
 	url = https://github.com/liqunmaster/test_heavy.git
+[submodule "ThirdParty/SEGGER"]
+	path = ThirdParty/SEGGER
+	url = https://github.com/SEGGERMicro/RTT.git
+[submodule "ThirdParty/eigen"]
+	path = ThirdParty/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "ThirdParty/tinyusb"]
+	path = ThirdParty/tinyusb
+	url = https://github.com/hathach/tinyusb.git
