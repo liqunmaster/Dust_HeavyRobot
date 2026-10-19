@@ -23,7 +23,8 @@ git clone --recurse-submodules https://github.com/liqunmaster/Dust_HeavyRobot.gi
 git submodule update --init --recursive
 ```
 
-GitHub 中的子模块目录可跳转到对应上游的固定提交。Eigen 的官方仓库位于 GitLab，因此该目录跳转到 GitLab。
+GitHub 中的 SEGGER 和 TinyUSB 子模块目录可跳转到对应上游的固定提交。
+Eigen 的官方仓库位于 GitLab；如果 GitHub 未提供该子模块目录的跳转链接，请使用上表中的仓库或固定版本链接。
 
 ## Andes DSP 来源
 
