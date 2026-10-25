@@ -1,0 +1,3 @@
+robot_component(robot_drivers_imu_invensense_icm42688p_hxy
+	icm42688p_hxy.cpp
+)

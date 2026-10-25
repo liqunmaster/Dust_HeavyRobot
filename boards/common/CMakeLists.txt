@@ -1,0 +1,2 @@
+robot_component(robot_board_parameters control_parameters.cpp)
+add_subdirectory(config)

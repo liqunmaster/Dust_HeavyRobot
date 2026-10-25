@@ -1,0 +1,13 @@
+uint8 ORB_MAX_INSTANCES = 4
+bool feedback_fresh
+uint32 feedback_age_ms
+uint32 feedback_count
+float32 target_angle_rad
+float32 measured_angle_rad
+float32 command_torque_nm
+int32 control_error
+uint32 can_tx_completed
+uint32 can_tx_errors
+uint32 can_rx_received
+uint32 can_rx_dropped
+uint64 timestamp

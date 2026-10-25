@@ -1,0 +1,1 @@
+add_subdirectory(icm42688p_hxy)

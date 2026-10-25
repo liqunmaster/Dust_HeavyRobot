@@ -1,0 +1,6 @@
+add_subdirectory(canfd_bus)
+add_subdirectory(motor_device)
+add_subdirectory(motor_port)
+add_subdirectory(motor_service)
+add_subdirectory(rs485_bus)
+add_subdirectory(usb_port)

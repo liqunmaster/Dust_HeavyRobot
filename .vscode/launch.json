@@ -15,10 +15,10 @@
                 "D:/MCU/hpm/hpm_sdk/boards/openocd"
             ],
             "configFiles": [
-                "${workspaceFolder}/Board/hpm5361/vllink.cfg"
+                "${workspaceFolder}/boards/hpm5361/daplink.cfg"
             ],
             "openOCDLaunchCommands": [
-                "adapter speed 10"
+                "adapter speed 100"
             ],
             "gdbPath": "D:/MCU/hpm/toolchains/rv32imac_zicsr_zifencei_multilib_b_ext-win/bin/riscv32-unknown-elf-gdb.exe",
             "showDevDebugOutput": "raw",
@@ -38,10 +38,10 @@
                 "D:/MCU/hpm/hpm_sdk/boards/openocd"
             ],
             "configFiles": [
-                "${workspaceFolder}/Board/hpm5361/vllink.cfg"
+                "${workspaceFolder}/boards/hpm5361/daplink.cfg"
             ],
             "openOCDLaunchCommands": [
-                "adapter speed 10"
+                "adapter speed 100"
             ],
             "gdbPath": "D:/MCU/hpm/toolchains/rv32imac_zicsr_zifencei_multilib_b_ext-win/bin/riscv32-unknown-elf-gdb.exe",
             "showDevDebugOutput": "raw",
@@ -61,7 +61,7 @@
                 "D:/MCU/hpm/hpm_sdk/boards/openocd"
             ],
             "configFiles": [
-                "${workspaceFolder}/Board/hpm5361/vllink.cfg"
+                "${workspaceFolder}/boards/hpm5361/vllink.cfg"
             ],
             "openOCDLaunchCommands": [
                 "adapter speed 10"

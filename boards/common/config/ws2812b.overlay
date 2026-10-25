@@ -1,0 +1,25 @@
+/* 保留 PA10 的原有 PCB 接线，由 GPTMR0 CH2 产生硬件边沿。
+ * 同步的 CH3 通过 DMA 更新下一位，DMAMUX 请求源为 0x03。
+ * PWM0 及其重载寄存器由 IMU 加热器独占。
+ */
+&gpioa {
+    pinctrl-0 = <&pinmux_ws2812b>;
+    pinctrl-names = "default";
+    dmas = <&hdma 2 0x03>;
+    dma-names = "ws2812b";
+};
+
+&pinctrl {
+    pinmux_ws2812b: pinmux_ws2812b {
+        group0 {
+            pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 10), IOC_TYPE_IOC, 0, 0)>;
+        };
+    };
+};
+
+&pinmux_pwm0 {
+    group0 {
+        pinmux = <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTA, 9), IOC_TYPE_IOC, 0, 16)>,
+                 <HPMICRO_PINMUX(HPMICRO_PIN(HPMICRO_PORTB, 7), IOC_TYPE_IOC, 0, 16)>;
+    };
+};

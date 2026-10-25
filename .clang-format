@@ -1,29 +1,31 @@
 BasedOnStyle: LLVM
-IndentWidth: 4
-UseTab: Never
-NamespaceIndentation: All
+IndentWidth: 8
+UseTab: Always
+NamespaceIndentation: None
 IndentAccessModifiers: false
-AccessModifierOffset: 0
+AccessModifierOffset: -8
 WrapNamespaceBodyWithEmptyLines: Never
-ColumnLimit: 0
+ColumnLimit: 120
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true
   AfterControlStatement: Never
-  AfterEnum: true
+  AfterEnum: false
   AfterExternBlock: true
   AfterFunction: true
   AfterNamespace: true
-  AfterStruct: true
-  AfterUnion: true
+  AfterStruct: false
+  AfterUnion: false
   BeforeCatch: false
   BeforeElse: false
-AllowShortBlocksOnASingleLine: Never
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Always
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: false
 IndentCaseLabels: true
 SeparateDefinitionBlocks: Always
 MaxEmptyLinesToKeep: 1
 SortIncludes: Never
 IncludeBlocks: Preserve
+
+TabWidth: 8

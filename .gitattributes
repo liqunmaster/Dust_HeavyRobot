@@ -1,0 +1,17 @@
+* text=auto
+*.c text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.py text eol=lf
+*.msg text eol=lf
+*.cmake text eol=lf
+*.md text eol=lf
+*.cmd text eol=crlf
+*.json text eol=lf
+.clang-format text eol=lf
+.clangd text eol=lf
+.editorconfig text eol=lf
+.astylerc text eol=lf
+Kconfig text eol=lf
+CMakeLists.txt text eol=lf

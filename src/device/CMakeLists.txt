@@ -1,0 +1,6 @@
+add_subdirectory(encoder)
+add_subdirectory(imu)
+add_subdirectory(lights)
+add_subdirectory(motor)
+add_subdirectory(rc)
+add_subdirectory(servo)

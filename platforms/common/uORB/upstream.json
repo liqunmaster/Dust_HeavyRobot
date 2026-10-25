@@ -1,0 +1,16 @@
+{
+  "upstream": "https://github.com/PX4/PX4-Autopilot",
+  "ref": "v1.16.0",
+  "files": {
+    "Publication.hpp": {
+      "upstream_sha256": "ddd7a343d6514ba43de1170f53ad137e24536e33306085eee2192f2fd89b90da"
+    },
+    "Subscription.hpp": {
+      "upstream_sha256": "0d350258d6f3d2833b91183a36b3ea4efe0d318e077b79e13efcfb613bbf6d04"
+    },
+    "Subscription.cpp": {
+      "upstream_sha256": "654ff0ec824403b10c5f11a4d2b200415d0f4b2962a0a8af00e86e12ec65a64a"
+    }
+  },
+  "commit": "6ea3539157ca358c70a515878b77077af7d4611d"
+}

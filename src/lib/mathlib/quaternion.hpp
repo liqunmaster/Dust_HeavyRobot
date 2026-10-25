@@ -1,0 +1,99 @@
+#pragma once
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <limits>
+
+#include "kalman.hpp"
+#include "type_math.hpp"
+
+namespace alg::attitude
+{
+
+struct Sample {
+	float gyro[3] {0.0f, 0.0f, 0.0f};
+	float accel[3] {0.0f, 0.0f, 0.0f};
+	float temp{0.0f};
+	float dt{0.005f};
+};
+
+class QuaternionEKF final
+{
+public:
+
+	struct Config {
+		float qq{10.0f};
+		float qb{0.001f};
+		float r{1000000.0f};
+		float lambda{1.0f};
+		float alpha{0.0f};
+		float chi2_th{16.0f};
+		uint32_t div_limit{50};
+		float w_stable_th{0.3f};
+		float a_ref{9.80665f};
+		float a_tol{0.5f};
+		float bias_limit{0.01f};
+		float pb_limit{10000.0f};
+	};
+
+	struct State {
+		bool init{false};
+		bool converg{false};
+		bool stable{false};
+		uint64_t err_cnt{0};
+		uint64_t upd_cnt{0};
+		float q[4] {1.0f, 0.0f, 0.0f, 0.0f};
+		float bg[3] {0.0f, 0.0f, 0.0f};
+		float w[3] {0.0f, 0.0f, 0.0f};
+		float a[3] {0.0f, 0.0f, 0.0f};
+		float w_norm{0.0f};
+		float a_norm{0.0f};
+		float roll{0.0f};
+		float pitch{0.0f};
+		float yaw{0.0f};
+		float yaw_sum{0.0f};
+		float chi2{0.0f};
+		float dt{0.0f};
+	};
+
+	void Init(const Config &config);
+
+	void InitFromAccel(const Sample &sample);
+
+	void Update(const Sample &sample);
+
+	const State &GetState() const { return _state; }
+
+private:
+	using EKF = alg::filter::ExtendedKalman<6, 3, 4>;
+
+	static void SystemFunc(const EKF::State &state, const EKF::Ctrl &control, EKF::State &predicted, EKF::Cov &jacobian);
+
+	static void ObserveFunc(const EKF::State &state, EKF::Obs &predicted, EKF::ObsMat &jacobian);
+
+	static bool Normalize(EKF::State &state);
+
+	void UpdateAngles();
+
+	Config _config{};
+
+	State _state{};
+
+	EKF _ekf{};
+
+	uint16_t _static_count{0};
+
+	float _static_z_sum{0.0f};
+
+	uint16_t _static_z_count{0};
+
+	float _previous_yaw{0.0f};
+
+	int32_t _yaw_turns{0};
+
+	float _previous_q[4] {1.0f, 0.0f, 0.0f, 0.0f};
+
+	bool _have_previous_q{false};
+};
+}

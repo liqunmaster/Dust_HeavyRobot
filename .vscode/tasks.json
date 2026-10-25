@@ -2,13 +2,25 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "format_px4",
+            "type": "process",
+            "command": "python",
+            "args": [
+                "Tools/format_code.py"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "build_h",
             "type": "process",
             "command": "cmd.exe",
             "args": [
                 "/d",
                 "/c",
-                "Script\\build^&flash.cmd",
+                "Tools\\build^&flash.cmd",
                 "H",
                 "Build",
                 "Auto"
@@ -27,7 +39,7 @@
             "args": [
                 "/d",
                 "/c",
-                "Script\\build^&flash.cmd",
+                "Tools\\build^&flash.cmd",
                 "H",
                 "Flash",
                 "Auto"
@@ -46,7 +58,7 @@
             "args": [
                 "/d",
                 "/c",
-                "Script\\build^&flash.cmd",
+                "Tools\\build^&flash.cmd",
                 "L",
                 "Build",
                 "Auto"
@@ -65,7 +77,7 @@
             "args": [
                 "/d",
                 "/c",
-                "Script\\build^&flash.cmd",
+                "Tools\\build^&flash.cmd",
                 "L",
                 "Flash",
                 "Auto"
@@ -84,7 +96,7 @@
             "args": [
                 "/d",
                 "/c",
-                "Script\\build^&flash.cmd",
+                "Tools\\build^&flash.cmd",
                 "L",
                 "Flash",
                 "Vllink"

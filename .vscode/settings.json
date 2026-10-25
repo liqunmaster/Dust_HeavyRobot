@@ -1,6 +1,6 @@
 {
-    "cmake.sourceDirectory": ".",
-    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.sourceDirectory": "${workspaceFolder}/boards/Dust_HeavyRobot_H",
+    "cmake.buildDirectory": "${workspaceFolder}/build/build_h",
     "cmake.buildType": "Debug",
     "cmake.generator": "Ninja",
     "cmake.configureOnOpen": false,
@@ -22,7 +22,19 @@
         "--header-insertion=never"
     ],
     "search.useIgnoreFiles": false,
-     "workbench.colorCustomizations": {
+    "workbench.colorCustomizations": {
         "tree.indentGuidesStroke": "#0099ff"
+    },
+    "editor.insertSpaces": false,
+    "editor.tabSize": 8,
+    "editor.detectIndentation": false,
+    "files.eol": "\n",
+    "[c]": {
+        "editor.formatOnSave": false,
+        "editor.formatOnType": false
+    },
+    "[cpp]": {
+        "editor.formatOnSave": false,
+        "editor.formatOnType": false
     }
 }

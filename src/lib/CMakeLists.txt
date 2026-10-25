@@ -1,0 +1,6 @@
+add_subdirectory(attitude_estimator)
+add_subdirectory(containers)
+add_subdirectory(control)
+add_subdirectory(crc)
+add_subdirectory(drivers)
+add_subdirectory(mathlib)

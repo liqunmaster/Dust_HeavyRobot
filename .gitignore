@@ -1,4 +1,4 @@
-﻿build/
+build/
 *.o
 *.obj
 *.elf
@@ -25,4 +25,5 @@ Thumbs.db
 **/*.bak
 **/*~
 
-/Doc/
+/test/
+/docs/
