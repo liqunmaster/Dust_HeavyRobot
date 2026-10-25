@@ -4,6 +4,7 @@ target_sources(app PRIVATE
     bsp_spi.cpp
     bsp_gpio.c
     bsp_pwm.cpp
+    bsp_ws2812b.cpp
     bsp_uart.cpp
     bsp_rs485.cpp
     bsp_usb.cpp

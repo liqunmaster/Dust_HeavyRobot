@@ -72,7 +72,7 @@ set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Suppress deprecated CMake warnings" FO
 list(APPEND DTS_ROOT ${ROBOT_ROOT}/Board/hpm5361)
 
 function(mcu_add_common_sources)
-    zephyr_compile_options(-Ofast)
+    zephyr_compile_options(-O2)
     foreach(component IN ITEMS math Bsp platform protocol Device Health_Monitor Module ThirdParty Topic)
         add_subdirectory("${ROBOT_ROOT}/${component}" "${CMAKE_BINARY_DIR}/shared/${component}")
     endforeach()

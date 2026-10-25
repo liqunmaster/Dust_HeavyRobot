@@ -16,11 +16,3 @@ config IMU_DEVICE_HI14R3_ICM42688P_HXY
       module are intentionally not included yet; the task still acquires ICM.
 
 endchoice
-
-config IMU_DEBUG_OUTPUT
-    bool "Print IMU attitude over USB"
-    default n
-    help
-      Enable the optional attitude diagnostic stream. Keep this disabled in
-      normal operation because formatted floating-point output is expensive
-      and changes the measured CPU load.

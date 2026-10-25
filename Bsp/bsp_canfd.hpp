@@ -118,6 +118,15 @@ extern "C"
         uint32_t recovery_failed;
     } CanfdStatistics;
 
+    // Cumulative timer cycles spent in BSP RX callbacks, including subscribers.
+    typedef struct
+    {
+        uint32_t cycles;
+        uint32_t max_cycles;
+    } CanfdRxTiming;
+
+    int bsp_canfd_get_rx_timing(CanfdDevice device, CanfdRxTiming *timing);
+
     int bsp_canfd_init(CanfdDevice device, const CanfdConfig *config);
 
     int bsp_canfd_deinit(CanfdDevice device);
@@ -197,6 +206,7 @@ namespace bsp_canfd_detail
         uint16_t data_sample_point;
         bool fd_enabled;
         CanfdAtomicStatistics statistics;
+        CanfdRxTiming rx_timing;
         atomic_t tx_active;
         atomic_t recovering;
         atomic_t recovery_state;

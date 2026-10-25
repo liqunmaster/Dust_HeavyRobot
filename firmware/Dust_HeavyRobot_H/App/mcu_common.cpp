@@ -64,7 +64,7 @@ void McuCommon::SendHCommandFrames()
 
     const uint8_t round = transmit_round_++ % 4U;
     if ((round % 2U) == 0U) {
-        (void)SendFrame(0x02, chassis_payload);
+        (void)SendFrame(0x100, chassis_payload);
     } else if (round == 1U) {
         McuCommandCommand command{};
         command.mouse_lr = remote_online ? static_cast<uint8_t>(sample.dt7_data.switch_right == 2 ? 1u : 0u) : 0;
@@ -73,11 +73,11 @@ void McuCommon::SendHCommandFrames()
             k_uptime_get_32() - angles.timestamp_ms < 20U ? angles.yaw_rad : 0.0f;
         uint8_t command_payload[8];
         mcu_encode_command(command, command_payload);
-        (void)SendFrame(0x02, command_payload);
+        (void)SendFrame(0x100, command_payload);
     } else {
         uint8_t autoaim_payload[8];
         mcu_encode_autoaim(autoaim_payload);
-        (void)SendFrame(0x02, autoaim_payload);
+        (void)SendFrame(0x100, autoaim_payload);
     }
 }
 
@@ -114,7 +114,7 @@ void McuCommon::Init()
     if (platform_canfd_init() != 0) {
         return;
     }
-    if (platform_canfd_subscribe(CANFD_DEVICE_CAN1, 0x03,
+    if (platform_canfd_subscribe(CANFD_DEVICE_CAN1, 0x101,
                                  CANFD_ID_STANDARD, CANFD_PROTOCOL_CLASSIC,
                                  feedback_handle_) != 0) {
         return;

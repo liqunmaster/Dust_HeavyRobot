@@ -59,7 +59,7 @@ void McuCommon::SendLFeedback()
 {
     uint8_t feedback_payload[8];
     mcu_encode_referee(feedback_payload);
-    (void)SendFrame(0x03, feedback_payload);
+    (void)SendFrame(0x101, feedback_payload);
 }
 
 void McuCommon::ThreadEntry(void *context, void *, void *)
@@ -108,7 +108,7 @@ void McuCommon::Init()
         return;
     }
     for (uint8_t index = 0; index < 3; ++index) {
-        if (platform_canfd_subscribe(CANFD_DEVICE_CAN1, 0x02,
+        if (platform_canfd_subscribe(CANFD_DEVICE_CAN1, 0x100,
                                     CANFD_ID_STANDARD, CANFD_PROTOCOL_CLASSIC,
                                     command_handles_[index], MCU_FRAME_CHASSIS + index) != 0) {
             return;

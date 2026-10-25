@@ -17,7 +17,6 @@
     "C_Cpp.intelliSenseEngine": "disabled",
     "clangd.path": "D:/MCU/flash/clangd/bin/clangd.exe",
     "clangd.arguments": [
-        "--compile-commands-dir=${workspaceFolder}/build/build_h",
         "--query-driver=D:/MCU/zephyr/zephyr-sdk/gnu/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gcc.exe",
         "--background-index",
         "--header-insertion=never"

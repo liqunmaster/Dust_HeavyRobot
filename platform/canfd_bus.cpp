@@ -45,18 +45,21 @@ void CanfdBus::OnRxCallback(CanfdDevice bus, const CanfdRxView *frame, void *)
     const uint32_t timestamp = k_uptime_get_32();
     bool matched = false;
     const k_spinlock_key_t key = k_spin_lock(&subscription_lock_);
-    for (Subscription &entry : subscriptions_) {
+    for (uint8_t link = subscription_heads_[bus][frame->id & 31U]; link != 0;) {
+        Subscription &entry = subscriptions_[link - 1U];
+        link = entry.next;
         if (!entry.used || entry.bus != bus || entry.id != frame->id ||
             entry.id_type != frame->id_type || entry.protocol != frame->protocol ||
             (entry.payload_type >= 0 && (frame->length == 0 || frame->data[0] != entry.payload_type))) {
             continue;
         }
         matched = true;
-        memcpy(entry.snapshot.data, frame->data, frame->length);
-        if (frame->length < sizeof(entry.snapshot.data)) {
+        // The unused tail starts zeroed. Only clear bytes left by a longer frame.
+        if (frame->length < entry.snapshot.length) {
             memset(entry.snapshot.data + frame->length, 0,
-                   sizeof(entry.snapshot.data) - frame->length);
+                   entry.snapshot.length - frame->length);
         }
+        memcpy(entry.snapshot.data, frame->data, frame->length);
         entry.snapshot.length = frame->length;
         entry.snapshot.timestamp_ms = timestamp;
         ++entry.snapshot.sequence;
@@ -213,6 +216,9 @@ int CanfdBus::Subscribe(CanfdDevice bus, uint32_t id, CanfdIdType id_type,
             entry.id_type = id_type;
             entry.protocol = protocol;
             entry.payload_type = payload_type;
+            uint8_t &head = subscription_heads_[bus][id & 31U];
+            entry.next = head;
+            head = static_cast<uint8_t>(index + 1U);
             handle.slot = static_cast<uint8_t>(index);
             k_spin_unlock(&subscription_lock_, key);
             return 0;

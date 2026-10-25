@@ -1,12 +1,22 @@
 diff --git a/drivers/spi/spi_hpmicro.c b/drivers/spi/spi_hpmicro.c
 --- a/drivers/spi/spi_hpmicro.c
 +++ b/drivers/spi/spi_hpmicro.c
-@@ -764,7 +764,7 @@ static int spi_hpm_transceive(const struct device *dev,
- 	    tx_bufs->buffers[0].buf != NULL && rx_bufs->buffers[0].buf != NULL &&
- 	    tx_bufs->buffers[0].len != 0U &&
- 	    tx_bufs->buffers[0].len == rx_bufs->buffers[0].len &&
--	    tx_bufs->buffers[0].len <= 16U &&
+@@ -789,6 +789,18 @@
+ 	const struct spi_hpm_data *data = dev->data;
+ 	if (data->dma_faulted) {
+ 		return -EIO;
++	}
++	/* Small synchronous transfers use the existing polling path. */
++	if (spi_cfg != NULL && tx_bufs != NULL && rx_bufs != NULL &&
++	    tx_bufs->buffers != NULL && rx_bufs->buffers != NULL &&
++	    tx_bufs->count == 1U && rx_bufs->count == 1U &&
++	    tx_bufs->buffers[0].buf != NULL && rx_bufs->buffers[0].buf != NULL &&
++	    tx_bufs->buffers[0].len != 0U &&
++	    tx_bufs->buffers[0].len == rx_bufs->buffers[0].len &&
 +	    tx_bufs->buffers[0].len <= 32U &&
- 	    spi_cfg->frequency != 0U &&
- 	    SPI_WORD_SIZE_GET(spi_cfg->operation) == 8U) {
- 		return transceive_pio(dev, spi_cfg, tx_bufs, rx_bufs);
++	    spi_cfg->frequency != 0U &&
++	    SPI_WORD_SIZE_GET(spi_cfg->operation) == 8U) {
++		return transceive(dev, spi_cfg, tx_bufs, rx_bufs, false, NULL, NULL);
+ 	}
+ 	return transceive_dma(dev, spi_cfg, tx_bufs, rx_bufs, false, NULL, NULL);
+ #endif /* CONFIG_SPI_HPM_SPI_DMA */

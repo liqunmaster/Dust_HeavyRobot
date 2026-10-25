@@ -132,6 +132,7 @@ namespace
             return;
         }
 
+        const uint32_t start_cycles = k_cycle_get_32();
         const CanfdRxView received{
             frame->id,
             (frame->flags & CAN_FRAME_IDE) != 0 ? CANFD_ID_EXTENDED : CANFD_ID_STANDARD,
@@ -148,6 +149,11 @@ namespace
             if (context->extra_rx_callbacks[index] != nullptr) {
                 context->extra_rx_callbacks[index](context->id, &received, context->extra_rx_user_data[index]);
             }
+        }
+        const uint32_t elapsed = k_cycle_get_32() - start_cycles;
+        context->rx_timing.cycles += elapsed;
+        if (elapsed > context->rx_timing.max_cycles) {
+            context->rx_timing.max_cycles = elapsed;
         }
     }
 
@@ -616,6 +622,18 @@ extern "C"
         statistics->rx_dropped = atomic_get(&source.rx_dropped);
         statistics->recovery_succeeded = atomic_get(&source.recovery_succeeded);
         statistics->recovery_failed = atomic_get(&source.recovery_failed);
+    }
+
+    int bsp_canfd_get_rx_timing(CanfdDevice device, CanfdRxTiming *timing)
+    {
+        if (!ValidDevice(device) || timing == nullptr) {
+            return -EINVAL;
+        }
+        // RX callbacks run in interrupt context on this single-core target.
+        const unsigned int key = irq_lock();
+        *timing = contexts[device].rx_timing;
+        irq_unlock(key);
+        return 0;
     }
 
     void bsp_canfd_clear_statistics(CanfdDevice device)

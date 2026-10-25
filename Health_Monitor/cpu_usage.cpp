@@ -1,4 +1,5 @@
 #include "cpu_usage.hpp"
+#include "can_diagnostics.hpp"
 
 #include <errno.h>
 #include <zephyr/sys/cpu_load.h>
@@ -32,10 +33,15 @@ void CpuUsage::DisplayOnWs2812b()
         has_filtered_ = true;
     }
 
-    constexpr float brightness = 126.0f;
-    const uint8_t red = static_cast<uint8_t>(filtered_percent_ * brightness / 100.0f);
-    const uint8_t green = static_cast<uint8_t>((100.0f - filtered_percent_) * brightness / 100.0f);
-    ws2812b_set_color({red, green, 0});
+    filtered_percent_ = filtered_percent_ < 0.0f ? 0.0f :
+                        filtered_percent_ > 100.0f ? 100.0f : filtered_percent_;
+    if (filtered_percent_ < 50.0f) {
+        ws2812b_set_color({0, 126, 0});
+    } else if (filtered_percent_ <= 75.0f) {
+        ws2812b_set_color({126, 126, 0});
+    } else {
+        ws2812b_set_color({126, 0, 0});
+    }
 }
 
 int CpuUsage::Sample(float &percent)
@@ -80,6 +86,7 @@ void HealthMonitor::TimerCallback(struct k_timer *timer)
 void HealthMonitor::Poll()
 {
     motor_health_poll();
+    can_diagnostics_poll();
     cpu_usage_supervisor();
 }
 

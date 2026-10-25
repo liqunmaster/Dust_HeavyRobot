@@ -45,7 +45,12 @@ void ImuPort::ProcessSample(const ImuSample &sample)
 
 void ImuPort::UpdateHeater(const ImuSample &sample, uint32_t now_ms)
 {
-    if (!heater_ready_ || now_ms - last_heater_update_ms_ < 100) {
+    if (now_ms - last_heater_update_ms_ < 100) {
+        return;
+    }
+    if (!heater_ready_) {
+        last_heater_update_ms_ = now_ms;
+        heater_ready_ = bsp_pwm_heater_init() == 0;
         return;
     }
     const float dt = static_cast<float>(now_ms - last_heater_update_ms_) * 0.001f;

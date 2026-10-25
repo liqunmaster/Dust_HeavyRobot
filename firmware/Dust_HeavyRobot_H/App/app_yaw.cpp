@@ -1,10 +1,7 @@
 #include "app_yaw.hpp"
 
 #include <string.h>
-#include <stdio.h>
 #include "type_math.hpp"
-#include "cpu_usage.hpp"
-#include "bsp_uart.hpp"
 
 #if defined(ROBOT_BOARD_H)
 
@@ -13,9 +10,6 @@ namespace
     Yaw yaw;
     K_THREAD_STACK_DEFINE(yaw_stack, 2048);
     K_SEM_DEFINE(yaw_sem, 0, 1);
-
-    K_MSGQ_DEFINE(yaw_debug_queue, sizeof(YawDebugSample), 1, 4);
-    K_THREAD_STACK_DEFINE(yaw_debug_stack, 2048);
 }
 
 void Yaw::TimerCallback(struct k_timer *)
@@ -37,29 +31,6 @@ float Yaw::RightStickYToAngle(uint16_t raw)
         normalized = -1.0f;
     }
     return normalized * math::pi;
-}
-
-void Yaw::DebugThreadEntry(void *context, void *, void *)
-{
-    static_cast<Yaw *>(context)->DebugTask();
-}
-
-void Yaw::DebugTask()
-{
-    YawDebugSample sample{};
-    char line[160];
-    while (1) {
-        k_msgq_get(&yaw_debug_queue, &sample, K_FOREVER);
-        const int count = snprintf(line, sizeof(line), "%.2f,%.2f,%.2f,%.1f,%.2f,%d,%d,%.2f,%d\n",
-                                   sample.target_speed, sample.actual_speed, sample.current,
-                                   cpu_usage_latest_percent(), sample.target_angle_deg,
-                                   sample.command_fresh ? 1 : 0, sample.feedback_fresh ? 1 : 0,
-                                   sample.actual_angle_deg, sample.imu_fresh ? 1 : 0);
-        if (count > 0 && static_cast<size_t>(count) < sizeof(line)) {
-
-            (void)bsp_uart_transmit(line, static_cast<size_t>(count));
-        }
-    }
 }
 
 bool Yaw::UpdateYawFeedback(uint32_t now_ms)
@@ -121,15 +92,6 @@ void Yaw::ControlStep()
         last_send_ms_ = now_ms;
     }
     control_active_ = active;
-    if (now_ms - last_debug_ms_ >= 10U) {
-        last_debug_ms_ = now_ms;
-        const YawDebugSample debug{target_speed, data.now_omega, current,
-                                   target_angle * 180.0f / math::pi,
-                                   angles.yaw_rad * 180.0f / math::pi,
-                                   command_fresh, feedback_fresh, imu_fresh};
-
-        (void)k_msgq_put(&yaw_debug_queue, &debug, K_NO_WAIT);
-    }
 }
 
 void Yaw::Task()
@@ -151,7 +113,6 @@ void Yaw::Init()
         platform_canfd_subscribe(CANFD_DEVICE_CAN1, motor_.GetFeedbackId(),
                                  CANFD_ID_STANDARD, CANFD_PROTOCOL_CLASSIC,
                                  feedback_handle_) != 0) {
-        printf("yaw init failed: CAN1 C620 id=0x202\r\n");
         return;
     }
 
@@ -174,9 +135,6 @@ void Yaw::Init()
     speed_pid_.Configure(speed_config);
     (void)motor_.SetCurrent(0.0f);
 
-    k_thread_create(&debug_thread_, yaw_debug_stack,
-                    K_THREAD_STACK_SIZEOF(yaw_debug_stack), DebugThreadEntry, this, nullptr, nullptr, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
-    k_thread_name_set(&debug_thread_, "yaw_debug");
     k_timer_init(&timer_, TimerCallback, nullptr);
     k_timer_start(&timer_, K_MSEC(1), K_MSEC(1));
     k_thread_create(&thread_, yaw_stack, K_THREAD_STACK_SIZEOF(yaw_stack),
@@ -186,25 +144,9 @@ void Yaw::Init()
     initialized_ = true;
 }
 
-void Yaw::DebugPoll()
-{
-    const C620Data data = motor_.GetData();
-    InsEulerAngles angles{};
-    const bool imu_fresh = ins_get_euler_angles(angles) &&
-                           k_uptime_get_32() - angles.timestamp_ms < 20U;
-    printf("yaw: feedback=%d imu=%d angle=%+.2f deg omega=%+.2f rad/s current=%+.2f A\r\n",
-           feedback_valid_ ? 1 : 0, imu_fresh ? 1 : 0,
-           angles.yaw_rad * 180.0f / math::pi, data.now_omega, data.now_current);
-}
-
 void app_yaw_init()
 {
     yaw.Init();
-}
-
-void app_yaw_debug_poll()
-{
-    yaw.DebugPoll();
 }
 
 #endif

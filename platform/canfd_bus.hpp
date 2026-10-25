@@ -48,6 +48,7 @@ class CanfdBus
         CanfdIdType id_type = CANFD_ID_STANDARD;
         CanfdProtocol protocol = CANFD_PROTOCOL_CLASSIC;
         int16_t payload_type = -1;
+        uint8_t next = 0; // Slot + 1; zero terminates the bucket chain.
         PlatformCanfdSnapshot snapshot{};
     };
 
@@ -86,6 +87,7 @@ class CanfdBus
 
     int EnsureBus(CanfdDevice bus);
     Subscription subscriptions_[64]{};
+    uint8_t subscription_heads_[CANFD_DEVICE_COUNT][32]{};
 
     TxMailbox::PeriodicEntry periodic_[32]{};
     TxMailbox mailboxes_[CANFD_DEVICE_COUNT]{};

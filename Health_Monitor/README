@@ -14,7 +14,7 @@ H/L 各自的 `firmware/Dust_HeavyRobot_H/main.cpp`、`firmware/Dust_HeavyRobot_
 
 负载来自 Zephyr 的 `cpu_load_get(true)` 使用 idle hook 后端按采样区间计算 CPU 忙碌比例。采样失败时 LED 熄灭。
 
-WS2812B 使用四分之一权重的指数平滑值显示负载 颜色从绿过渡到黄、再到红：0% 为绿色 50% 为黄色 100% 为红色。`Sample()` 返回未经平滑的区间负载，`cpu_usage_latest_percent()` 读取缓存。红色和绿色通道的最大值为 126 蓝色通道始终为 0。LED 的实际发送由 `Device/ws2812b` 和 `Bsp/bsp_pwm` 完成。
+WS2812B 使用四分之一权重的指数平滑值显示负载，采用三档固定颜色：低于 50% 显示纯绿 RGB=(0,126,0)，50%～75%（包含两个端点）显示纯黄 RGB=(126,126,0)，高于 75% 显示纯红 RGB=(126,0,0)。`Sample()` 返回未经平滑的区间负载，`cpu_usage_latest_percent()` 读取缓存。红色和绿色通道的最大值为 126，蓝色通道始终为 0。LED 的实际发送由 `Device/ws2812b` 和 `Bsp/bsp_ws2812b` 完成。
 
 本功能依赖 `prj.conf` 中的 `CONFIG_CPU_LOAD=y` 和 `CONFIG_CPU_LOAD_BACKEND_IDLE_HOOK=y` 不依赖线程运行统计。LED 显示的是采样区间内的 CPU 忙碌比例 并非单次函数调用的耗时。
 

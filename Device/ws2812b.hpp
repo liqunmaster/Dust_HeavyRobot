@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "bsp_pwm.hpp"
+#include "bsp_ws2812b.hpp"
 
 struct Ws2812bColor
 {
@@ -13,6 +13,7 @@ struct Ws2812bColor
 
 int ws2812b_init();
 
-void ws2812b_set_color(Ws2812bColor color);
+// Nonblocking submission; -EBUSY leaves the active frame untouched.
+int ws2812b_set_color(Ws2812bColor color);
 
-void ws2812b_off();
+int ws2812b_off();
