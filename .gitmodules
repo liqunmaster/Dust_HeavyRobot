@@ -1,5 +1,5 @@
 [submodule "App/test"]
-	path = firmware/test
+	path = sim/heavy_robot
 	url = https://github.com/liqunmaster/test_heavy.git
 [submodule "ThirdParty/SEGGER"]
 	path = ThirdParty/SEGGER
